@@ -1,0 +1,56 @@
+; Engine configuration file.
+; Prefer editing through Godot's Project Settings UI.
+
+config_version=5
+
+[application]
+
+config/name="Scene Sync Godot"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.6", "C#", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/scene_sync/plugin.cfg")
+
+[dotnet]
+
+project/assembly_name="SceneSyncGodot"
+
+[physics]
+
+common/physics_ticks_per_second=90
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0, 0, 0, 0)
+
+[scene_sync]
+
+presence_url="wss://afjk.jp/presence"
+default_room=""
+
+[xr]
+
+openxr/enabled=true
+openxr/default_action_map="res://openxr_action_map.tres"
+openxr/form_factor=0
+openxr/view_configuration=1
+openxr/environment_blend_mode=2
+openxr/startup_alert=false
+openxr/extensions/hand_tracking=true
+openxr/extensions/hand_tracking_controller_data_source=true
+openxr/extensions/hand_tracking_unobstructed_data_source=true
+openxr/extensions/meta/passthrough=true
+openxr/extensions/meta/render_model=false
+openxr/extensions/htc/passthrough=true
+shaders/enabled=true

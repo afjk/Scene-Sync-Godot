@@ -1,0 +1,251 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/scene_sync_status_panel.gd" id="1_panel"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_cursor"]
+bg_color = Color(0.12, 0.72, 1, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="SceneSyncStatusPanel" type="OpenXRCompositionLayerQuad"]
+sort_order = 10
+alpha_blend = true
+quad_size = Vector2(0.78, 0.52)
+script = ExtResource("1_panel")
+
+[node name="SceneSyncViewport" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(900, 600)
+render_target_update_mode = 4
+
+[node name="Interface" type="Control" parent="SceneSyncViewport"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 26
+
+[node name="FullPanel" type="PanelContainer" parent="SceneSyncViewport/Interface"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="SceneSyncViewport/Interface/FullPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Content" type="VBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 34
+text = "Scene Sync"
+
+[node name="Minimize" type="Button" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/Header"]
+custom_minimum_size = Vector2(150, 48)
+layout_mode = 2
+text = "Minimize"
+
+[node name="StateRow" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/StateRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+text = "Connection"
+
+[node name="Value" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/StateRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Disconnected"
+text_overrun_behavior = 3
+
+[node name="RoomRow" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/RoomRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+text = "Room code"
+
+[node name="RoomEdit" type="LineEdit" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/RoomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Enter room code"
+virtual_keyboard_enabled = false
+clear_button_enabled = true
+
+[node name="NicknameRow" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/NicknameRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+text = "Nickname"
+
+[node name="NicknameEdit" type="LineEdit" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/NicknameRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Device name"
+virtual_keyboard_enabled = false
+clear_button_enabled = true
+
+[node name="Buttons" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+alignment = 2
+theme_override_constants/separation = 16
+
+[node name="Connect" type="Button" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+text = "Connect"
+
+[node name="Disconnect" type="Button" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+disabled = true
+text = "Disconnect"
+
+[node name="ErrorTitle" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+text = "Last error"
+
+[node name="ErrorValue" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+text = "None"
+autowrap_mode = 2
+
+[node name="ObjectRow" type="HBoxContainer" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/ObjectRow"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Received objects"
+
+[node name="Value" type="Label" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/ObjectRow"]
+layout_mode = 2
+text = "0"
+
+[node name="MinimizedPanel" type="PanelContainer" parent="SceneSyncViewport/Interface"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="SceneSyncViewport/Interface/MinimizedPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 90
+theme_override_constants/margin_top = 160
+theme_override_constants/margin_right = 90
+theme_override_constants/margin_bottom = 160
+
+[node name="Show" type="Button" parent="SceneSyncViewport/Interface/MinimizedPanel/Margin"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 38
+text = "Scene Sync"
+
+[node name="KeyboardPanel" type="PanelContainer" parent="SceneSyncViewport/Interface"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="SceneSyncViewport/Interface/KeyboardPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Content" type="VBoxContainer" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Target" type="Label" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Editing"
+horizontal_alignment = 1
+
+[node name="Preview" type="LineEdit" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+editable = false
+virtual_keyboard_enabled = false
+
+[node name="Keys" type="GridContainer" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 10
+
+[node name="Commands" type="HBoxContainer" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Shift" type="Button" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands"]
+custom_minimum_size = Vector2(140, 52)
+layout_mode = 2
+toggle_mode = true
+text = "Shift"
+
+[node name="Space" type="Button" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands"]
+custom_minimum_size = Vector2(140, 52)
+layout_mode = 2
+text = "Space"
+
+[node name="Backspace" type="Button" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands"]
+custom_minimum_size = Vector2(180, 52)
+layout_mode = 2
+text = "Backspace"
+
+[node name="Clear" type="Button" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands"]
+custom_minimum_size = Vector2(140, 52)
+layout_mode = 2
+text = "Clear"
+
+[node name="Done" type="Button" parent="SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands"]
+custom_minimum_size = Vector2(140, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Done"
+
+[node name="Cursor" type="Panel" parent="SceneSyncViewport/Interface"]
+visible = false
+z_index = 100
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 0
+offset_right = 24.0
+offset_bottom = 24.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBox_cursor")

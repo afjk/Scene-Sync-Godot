@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simple_controller_model.gd" id="1_model"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_controller"]
+radius = 0.018
+height = 0.036
+radial_segments = 12
+rings = 6
+
+[node name="SimpleControllerModel" type="Node3D"]
+script = ExtResource("1_model")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_controller")
