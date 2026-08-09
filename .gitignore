@@ -1,17 +1,33 @@
-# Godot 4+ specific ignores
-.godot/
+# Godot-generated data
+/.godot/
+/.import/
 .nomedia
 
-# Godot-specific ignores
-.import/
+# Local Android/Gradle build data
+/android/
+/build/
+*.apk
+*.aab
+*.apks
+*.idsig
+
+# Downloaded project dependencies
+/addons/godotopenxrvendors/
+
+# Local export secrets, signing keys, and temporary files
 export.cfg
 export_credentials.cfg
+*.keystore
+*.jks
 *.tmp
 
 # Imported translations (automatically generated from CSV files)
 *.translation
 
-# Mono-specific ignores
-.mono/
+# .NET/Mono-generated data
+/.mono/
 data_*/
 mono_crash.*.json
+
+# OS metadata
+.DS_Store

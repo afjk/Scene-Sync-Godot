@@ -1,0 +1,136 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/simple_controller_model.tscn" id="2_controller_model"]
+[ext_resource type="Script" path="res://scripts/DotNetAndroidSmoke.cs" id="3_dotnet_smoke"]
+[ext_resource type="Script" path="res://addons/scene_sync/scene_sync_manager.gd" id="4_scene_sync_manager"]
+[ext_resource type="PackedScene" path="res://scenes/scene_sync_status_panel.tscn" id="5_scene_sync_panel"]
+[ext_resource type="Script" path="res://scripts/scene_sync_bootstrap.gd" id="6_scene_sync_bootstrap"]
+[ext_resource type="Script" path="res://scripts/scene_sync_remote_asset_adapter.gd" id="7_asset_adapter"]
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0, 0, 0, 0)
+
+[sub_resource type="StandardMaterial3D" id="Material_cube"]
+albedo_color = Color(1, 0.31, 0.08, 1)
+metallic = 0.15
+roughness = 0.32
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube"]
+material = SubResource("Material_cube")
+size = Vector3(0.36, 0.36, 0.36)
+
+[sub_resource type="StandardMaterial3D" id="Material_left"]
+albedo_color = Color(0.05, 0.62, 1, 1)
+roughness = 0.28
+
+[sub_resource type="StandardMaterial3D" id="Material_right"]
+albedo_color = Color(1, 0.18, 0.12, 1)
+roughness = 0.28
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ray"]
+top_radius = 0.002
+bottom_radius = 0.002
+height = 0.8
+radial_segments = 8
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="DotNetAndroidSmoke" type="Node" parent="."]
+script = ExtResource("3_dotnet_smoke")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -28, 0)
+light_energy = 1.25
+
+[node name="XROrigin3D" type="XROrigin3D" parent="."]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
+position = Vector3(0, 1.6, 2.0)
+current = true
+
+[node name="LeftController" type="XRController3D" parent="XROrigin3D"]
+visible = false
+position = Vector3(-0.25, 1.25, -0.55)
+tracker = &"left_hand"
+pose = &"aim"
+show_when_tracked = false
+
+[node name="AimRay" type="MeshInstance3D" parent="XROrigin3D/LeftController"]
+position = Vector3(0, 0, -0.4)
+rotation_degrees = Vector3(90, 0, 0)
+mesh = SubResource("CylinderMesh_ray")
+material_override = SubResource("Material_left")
+
+[node name="RayCast3D" type="RayCast3D" parent="XROrigin3D/LeftController"]
+target_position = Vector3(0, 0, -3)
+enabled = true
+
+[node name="RightController" type="XRController3D" parent="XROrigin3D"]
+visible = false
+position = Vector3(0.25, 1.25, -0.55)
+tracker = &"right_hand"
+pose = &"aim"
+show_when_tracked = false
+
+[node name="SceneSyncStatusPanel" parent="XROrigin3D" node_paths=PackedStringArray("right_controller") instance=ExtResource("5_scene_sync_panel")]
+position = Vector3(0, 1.55, -1.2)
+right_controller = NodePath("../RightController")
+
+[node name="AimRay" type="MeshInstance3D" parent="XROrigin3D/RightController"]
+position = Vector3(0, 0, -0.4)
+rotation_degrees = Vector3(90, 0, 0)
+mesh = SubResource("CylinderMesh_ray")
+material_override = SubResource("Material_right")
+
+[node name="RayCast3D" type="RayCast3D" parent="XROrigin3D/RightController"]
+target_position = Vector3(0, 0, -3)
+enabled = true
+
+[node name="LeftGripController" type="XRController3D" parent="XROrigin3D"]
+visible = false
+position = Vector3(-0.25, 1.25, -0.55)
+tracker = &"left_hand"
+pose = &"grip"
+show_when_tracked = false
+
+[node name="ControllerModel" parent="XROrigin3D/LeftGripController" instance=ExtResource("2_controller_model")]
+
+[node name="RightGripController" type="XRController3D" parent="XROrigin3D"]
+visible = false
+position = Vector3(0.25, 1.25, -0.55)
+tracker = &"right_hand"
+pose = &"grip"
+show_when_tracked = false
+
+[node name="ControllerModel" parent="XROrigin3D/RightGripController" instance=ExtResource("2_controller_model")]
+hand = 1
+
+[node name="Demo" type="Node3D" parent="."]
+
+[node name="Cube" type="MeshInstance3D" parent="Demo"]
+position = Vector3(0, 1.4, -1.5)
+rotation_degrees = Vector3(12, 24, 4)
+mesh = SubResource("BoxMesh_cube")
+
+[node name="SceneSyncRoot" type="Node3D" parent="."]
+
+[node name="SceneSyncManager" type="Node" parent="." node_paths=PackedStringArray("sync_root")]
+script = ExtResource("4_scene_sync_manager")
+auto_connect = false
+sync_root = NodePath("../SceneSyncRoot")
+
+[node name="SceneSyncRemoteAssetAdapter" type="Node" parent="."]
+script = ExtResource("7_asset_adapter")
+
+[node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root", "asset_adapter")]
+script = ExtResource("6_scene_sync_bootstrap")
+manager = NodePath("../SceneSyncManager")
+status_panel = NodePath("../XROrigin3D/SceneSyncStatusPanel")
+sync_root = NodePath("../SceneSyncRoot")
+asset_adapter = NodePath("../SceneSyncRemoteAssetAdapter")
