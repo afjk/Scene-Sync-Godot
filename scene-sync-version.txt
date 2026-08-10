@@ -1,5 +1,5 @@
 repository=https://github.com/afjk/afjk.jp.git
-commit=a2fcdb5cce6e73e40704334625f6d616247b3885
+commit=54b911cdccb40d22de3a55fd7c6853989d4a5ed3
 source_path=godot/addons/scene_sync
-source_tree=f05979caae6d6756e7a194b7b41514c4bc7557df
-addon_version=0.2.0
+source_tree=c70e0518d8ff34dc306b64558b43b40ca1861414
+addon_version=0.3.3

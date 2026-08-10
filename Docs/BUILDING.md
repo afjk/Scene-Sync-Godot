@@ -19,7 +19,7 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.2.0`は`afjk/afjk.jp`のcommit `a2fcdb5cce6e73e40704334625f6d616247b3885`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.3.3`は`afjk/afjk.jp`のcommit `54b911cdccb40d22de3a55fd7c6853989d4a5ed3`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
 ## 1. Repositoryを取得する
 
@@ -282,7 +282,7 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 
 ### Scene Syncが接続できない／詳細errorがpanelに出ない
 
-Scene Sync addon `0.2.0`の公開APIは接続状態、peer、object追加／削除signalを提供しますが、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していません。そのため統合UIだけでは詳細原因を表示できない場合があります。
+Scene Sync addon `0.3.3`の公開APIは接続状態、peer、object追加／削除signalに加え、URL asset取得のretry／失敗を`asset_load_diagnostic` signalで通知します。一方、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していないため、統合UIだけでは接続失敗の詳細原因を表示できない場合があります。
 
 次を確認してください。
 
@@ -290,6 +290,8 @@ Scene Sync addon `0.2.0`の公開APIは接続状態、peer、object追加／削�
 - roomとnicknameが意図した値であること
 - `wss://afjk.jp/presence`へ端末のネットワークから接続できること
 - `adb logcat`またはGodot consoleの`[SceneSync]` warning
+
+URL assetの問題は`asset_load_diagnostic`の`status`、`attempt`、`reason`、`retryDelay`、`willRetry`も確認してください。このdiagnosticはURLやroom credentialを含みません。
 
 詳細errorが必要な場合でも、vendor済み`addons/scene_sync`をこのrepositoryだけで直接改変しないでください。SDK側にerror公開が必要なら`afjk/afjk.jp`で修正し、新しいcommitへpinを更新します。
 

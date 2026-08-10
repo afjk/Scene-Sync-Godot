@@ -6,8 +6,8 @@ The Scene Sync Godot addon is developed in [`afjk/afjk.jp`](https://github.com/a
 
 - Repository: `https://github.com/afjk/afjk.jp.git`
 - Source path: `godot/addons/scene_sync`
-- Pinned commit: `a2fcdb5cce6e73e40704334625f6d616247b3885`
-- Addon version: `0.2.0`
+- Pinned commit: `54b911cdccb40d22de3a55fd7c6853989d4a5ed3`
+- Addon version: `0.3.3`
 - Vendor destination: `addons/scene_sync`
 
 The complete source subtree is vendored, including the C# Loomlet runner,
@@ -16,6 +16,12 @@ source tree object are recorded in `scene-sync-version.txt`.
 
 Do not patch files below `addons/scene_sync` directly. Fix SDK defects in
 `afjk/afjk.jp` first, then update this repository to the resulting commit.
+
+Version `0.3.3` owns remote URL mesh, image, and text loading, bounded retry,
+safe asset-load diagnostics, and animation policy/default-loop handling. It
+also preserves GLB source animation order for numeric clip selection while
+keeping `clipName` precedence. The application must not add a second asset
+adapter for the same managed objects.
 
 ## Updating
 
