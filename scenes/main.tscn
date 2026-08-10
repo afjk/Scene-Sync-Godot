@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/simple_controller_model.tscn" id="2_controller_model"]
@@ -6,7 +6,6 @@
 [ext_resource type="Script" path="res://addons/scene_sync/scene_sync_manager.gd" id="4_scene_sync_manager"]
 [ext_resource type="PackedScene" path="res://scenes/scene_sync_status_panel.tscn" id="5_scene_sync_panel"]
 [ext_resource type="Script" path="res://scripts/scene_sync_bootstrap.gd" id="6_scene_sync_bootstrap"]
-[ext_resource type="Script" path="res://scripts/scene_sync_remote_asset_adapter.gd" id="7_asset_adapter"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -125,12 +124,8 @@ script = ExtResource("4_scene_sync_manager")
 auto_connect = false
 sync_root = NodePath("../SceneSyncRoot")
 
-[node name="SceneSyncRemoteAssetAdapter" type="Node" parent="."]
-script = ExtResource("7_asset_adapter")
-
-[node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root", "asset_adapter")]
+[node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root")]
 script = ExtResource("6_scene_sync_bootstrap")
 manager = NodePath("../SceneSyncManager")
 status_panel = NodePath("../XROrigin3D/SceneSyncStatusPanel")
 sync_root = NodePath("../SceneSyncRoot")
-asset_adapter = NodePath("../SceneSyncRemoteAssetAdapter")

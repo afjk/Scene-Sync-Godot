@@ -5,7 +5,7 @@ Scene SyncのGodot addonを、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision向
 ## 固定しているsource
 
 - MR基盤: [`afjk/MR-Godot-Template`](https://github.com/afjk/MR-Godot-Template/tree/af6ac1233a939b2e09510afc0336459e8630288d) commit `af6ac1233a939b2e09510afc0336459e8630288d`
-- Scene Sync SDK: [`afjk/afjk.jp` の `godot/addons/scene_sync`](https://github.com/afjk/afjk.jp/tree/a2fcdb5cce6e73e40704334625f6d616247b3885/godot/addons/scene_sync) commit `a2fcdb5cce6e73e40704334625f6d616247b3885`、addon `0.2.0`
+- Scene Sync SDK: [`afjk/afjk.jp` の `godot/addons/scene_sync`](https://github.com/afjk/afjk.jp/tree/54b911cdccb40d22de3a55fd7c6853989d4a5ed3/godot/addons/scene_sync) commit `54b911cdccb40d22de3a55fd7c6853989d4a5ed3`、addon `0.3.3`
 
 SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記commitを`addons/scene_sync`へvendorしています。
 

@@ -10,7 +10,6 @@ const MANAGER_SCRIPT := preload("res://addons/scene_sync/scene_sync_manager.gd")
 @export var manager: Node
 @export var status_panel: Node
 @export var sync_root: Node3D
-@export var asset_adapter: Node
 
 var _received_object_ids: Dictionary = {}
 var _wants_connection := false
@@ -23,8 +22,8 @@ var _connection_generation := 0
 
 
 func _ready() -> void:
-	if manager == null or status_panel == null or sync_root == null or asset_adapter == null:
-		push_error("[SceneSync] Bootstrap requires manager, status panel, sync root, and asset adapter nodes.")
+	if manager == null or status_panel == null or sync_root == null:
+		push_error("[SceneSync] Bootstrap requires manager, status panel, and sync root nodes.")
 		set_process(false)
 		return
 
@@ -236,7 +235,6 @@ func _configure_manager(target: Node) -> void:
 	manager.connect(&"peers_updated", _on_peers_updated)
 	manager.connect(&"object_added", _on_object_added)
 	manager.connect(&"object_removed", _on_object_removed)
-	asset_adapter.call("bind_manager", manager)
 
 
 func _disconnect_manager_signals(target: Node) -> void:
@@ -260,7 +258,6 @@ func _reset_manager_after_explicit_disconnect() -> void:
 
 	var old_manager := manager
 	manager = null
-	asset_adapter.call("bind_manager", null)
 	if old_manager != null and is_instance_valid(old_manager):
 		_disconnect_manager_signals(old_manager)
 		old_manager.call("disconnect_from_server")
