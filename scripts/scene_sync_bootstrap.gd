@@ -71,9 +71,8 @@ func _on_connect_requested(room: String, nickname: String) -> void:
 	if not presence_url.begins_with("wss://") and not presence_url.begins_with("ws://"):
 		_reject_connection("Presence URL must use ws:// or wss://.")
 		return
-	if room == "":
-		_reject_connection("Room code is required.")
-		return
+	# An empty room intentionally omits ?room= so the server assigns its
+	# source-IP-derived LAN room, matching the Web client.
 	if nickname == "":
 		_reject_connection("Nickname is required.")
 		return
@@ -178,10 +177,14 @@ func _reject_connection(message: String) -> void:
 
 
 func _load_connection_settings() -> Dictionary:
+	return _load_connection_settings_from_path(USER_CONFIG_PATH)
+
+
+func _load_connection_settings_from_path(config_path: String) -> Dictionary:
 	var default_room := String(ProjectSettings.get_setting(DEFAULT_ROOM_SETTING, ""))
 	var default_nickname := _make_default_nickname()
 	var config := ConfigFile.new()
-	if config.load(USER_CONFIG_PATH) != OK:
+	if config.load(config_path) != OK:
 		return {"room": default_room, "nickname": default_nickname}
 	return {
 		"room": String(config.get_value(USER_CONFIG_SECTION, "room", default_room)),

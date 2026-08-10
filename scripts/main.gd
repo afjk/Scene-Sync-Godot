@@ -2,7 +2,6 @@ extends Node3D
 
 @onready var viewport: Viewport = get_viewport()
 @onready var environment: Environment = $WorldEnvironment.environment
-@onready var demo_cube: MeshInstance3D = $Demo/Cube
 @onready var xr_origin: XROrigin3D = $XROrigin3D
 @onready var aim_controllers: Array[XRController3D] = [
 	$XROrigin3D/LeftController,
@@ -46,9 +45,7 @@ func _ready() -> void:
 	print("OpenXR MR initialized with Alpha environment blend")
 
 
-func _process(delta: float) -> void:
-	demo_cube.rotate_y(delta * 0.55)
-	demo_cube.rotate_x(delta * 0.18)
+func _process(_delta: float) -> void:
 	_update_hand_joint_markers()
 	_update_controller_visuals()
 

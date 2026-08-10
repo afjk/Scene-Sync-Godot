@@ -19,6 +19,10 @@ env:
   GODOT_EDITOR_SHA256: 702a8a6785060203fd46373adf864586ecf0c377ac685d7107dde66b1eba0a9e
   GODOT_TEMPLATES_SHA256: 6436f474ee085fb0a94d3d296b9821736bdd663b6e91b2228fdf77066f1d1400
   OPENXR_VENDORS_SHA256: 6a838dbdf4115549e4511ebee0da9a5dcc8f9f6258d4cc2f2ee57a907a3e2911
+  SCENE_SYNC_RAPIER_TAG: scenesync-v0.8.28-r0.30.0.3
+  SCENE_SYNC_RAPIER_ASSET_SHA256: 90dbbbef3ddfd4e9d6fa34bed713dd1417a2ead70bbde668de6857c131cafbae
+  SCENE_SYNC_RAPIER_LINUX_SHA256: eba85afa6f74362327bee1671a5b8ef2a025bf10676ea62faa33f9fcdedd9c7e
+  SCENE_SYNC_RAPIER_ANDROID_SHA256: 8cbd6c0f566dd1333eb45917d8e923378b4c148c5b64df63fb12704e14f87caf
   TOOLCHAIN_CACHE_DIR: /home/runner/.cache/scene-sync-godot
 
 jobs:
@@ -84,6 +88,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify vendored Scene Sync Rapier runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_INFO=addons/godot-rapier3d/SCENESYNC_BUILD.txt
+          LINUX_LIBRARY=addons/godot-rapier3d/bin/libgodot_rapier.linux.x86_64-unknown-linux-gnu.so
+          ANDROID_LIBRARY=addons/godot-rapier3d/bin/libgodot_rapier.android.aarch64-linux-android.so
+          test -f addons/godot-rapier3d/godot-rapier3d.gdextension
+          grep -Fxq "tag=$SCENE_SYNC_RAPIER_TAG" "$BUILD_INFO"
+          grep -Fxq "asset_sha256=$SCENE_SYNC_RAPIER_ASSET_SHA256" "$BUILD_INFO"
+          printf '%s  %s\n' \
+            "$SCENE_SYNC_RAPIER_LINUX_SHA256" "$LINUX_LIBRARY" \
+            "$SCENE_SYNC_RAPIER_ANDROID_SHA256" "$ANDROID_LIBRARY" \
+            | sha256sum --check --strict
 
       - name: Set up .NET 9
         uses: actions/setup-dotnet@v4
@@ -219,6 +239,11 @@ jobs:
             --export-debug "$EXPORT_PRESET" \
             "$OUTPUT_APK"
           test -s "$OUTPUT_APK"
+          APK_ENTRIES="$RUNNER_TEMP/${EXPORT_PRESET// /-}-apk-entries.txt"
+          unzip -Z1 "$OUTPUT_APK" > "$APK_ENTRIES"
+          grep -Fxq \
+            'lib/arm64-v8a/libgodot_rapier.android.aarch64-linux-android.so' \
+            "$APK_ENTRIES"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

@@ -37,6 +37,7 @@ environment/defaults/default_clear_color=Color(0, 0, 0, 0)
 [scene_sync]
 
 presence_url="wss://afjk.jp/presence"
+; Empty omits the room query and uses the server-inferred LAN room, matching Web.
 default_room=""
 
 [xr]

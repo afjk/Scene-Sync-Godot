@@ -7,8 +7,12 @@ const NO_INTERSECTION := Vector2(-1.0, -1.0)
 const FULL_QUAD_SIZE := Vector2(0.78, 0.52)
 const MINIMIZED_QUAD_SIZE := Vector2(0.24, 0.16)
 const UI_CLICK_ACTION := &"ui_click"
+const PANEL_DISTANCE_METERS := 1.2
+const RECENTER_DEFER_FRAMES := 2
+const FORWARD_EPSILON_SQUARED := 0.000001
 
 @export var right_controller: XRController3D
+@export var xr_camera: XRCamera3D
 
 @onready var viewport: SubViewport = $SceneSyncViewport
 @onready var cursor: Control = $SceneSyncViewport/Interface/Cursor
@@ -36,6 +40,9 @@ var _keyboard_transition_pending := false
 var _pending_keyboard_target: LineEdit = null
 var _pending_keyboard_target_name := ""
 var _keyboard_finish_pending := false
+var _openxr_interface: OpenXRInterface = null
+var _placement_frames_remaining := -1
+var _initial_placement_complete := false
 
 
 func _ready() -> void:
@@ -56,9 +63,17 @@ func _ready() -> void:
 	_build_keyboard()
 	set_connection_state("Disconnected", false, false)
 	set_received_object_count(0)
+	_bind_openxr_interface()
+
+
+func _exit_tree() -> void:
+	_unbind_openxr_interface()
 
 
 func _process(_delta: float) -> void:
+	_bind_openxr_interface()
+	_update_panel_placement()
+
 	cursor.visible = false
 	if (
 		right_controller == null
@@ -104,6 +119,99 @@ func _process(_delta: float) -> void:
 
 	_was_pressed = is_pressed
 	_was_intersection = intersection
+
+
+func _bind_openxr_interface() -> void:
+	var candidate := XRServer.find_interface("OpenXR") as OpenXRInterface
+	if candidate == _openxr_interface:
+		return
+	_unbind_openxr_interface()
+	_openxr_interface = candidate
+	if _openxr_interface == null:
+		return
+	if not _openxr_interface.pose_recentered.is_connected(_on_pose_recentered):
+		_openxr_interface.pose_recentered.connect(_on_pose_recentered)
+	if not _openxr_interface.play_area_changed.is_connected(_on_play_area_changed):
+		_openxr_interface.play_area_changed.connect(_on_play_area_changed)
+
+
+func _unbind_openxr_interface() -> void:
+	if _openxr_interface == null or not is_instance_valid(_openxr_interface):
+		_openxr_interface = null
+		return
+	if _openxr_interface.pose_recentered.is_connected(_on_pose_recentered):
+		_openxr_interface.pose_recentered.disconnect(_on_pose_recentered)
+	if _openxr_interface.play_area_changed.is_connected(_on_play_area_changed):
+		_openxr_interface.play_area_changed.disconnect(_on_play_area_changed)
+	_openxr_interface = null
+
+
+func _on_pose_recentered() -> void:
+	_schedule_panel_placement(RECENTER_DEFER_FRAMES)
+
+
+func _on_play_area_changed(_mode: int) -> void:
+	_schedule_panel_placement(RECENTER_DEFER_FRAMES)
+
+
+func _schedule_panel_placement(frame_delay: int) -> void:
+	# Resetting the delay coalesces a burst and applies the final tracking pose.
+	_placement_frames_remaining = maxi(frame_delay, 0)
+
+
+func _update_panel_placement() -> void:
+	if (
+		not _initial_placement_complete
+		and _placement_frames_remaining < 0
+		and _is_xr_tracking_ready()
+	):
+		_schedule_panel_placement(1)
+
+	if _placement_frames_remaining < 0:
+		return
+	if _placement_frames_remaining > 0:
+		_placement_frames_remaining -= 1
+		return
+	if not _is_xr_tracking_ready():
+		_placement_frames_remaining = 1
+		return
+	if _place_in_front_of_camera():
+		_placement_frames_remaining = -1
+		_initial_placement_complete = true
+	else:
+		_placement_frames_remaining = 1
+
+
+func _is_xr_tracking_ready() -> bool:
+	if _openxr_interface == null or not is_instance_valid(_openxr_interface):
+		return false
+	if not _openxr_interface.is_initialized():
+		return false
+	var tracking_status := _openxr_interface.get_tracking_status()
+	return (
+		tracking_status != XRInterface.XR_UNKNOWN_TRACKING
+		and tracking_status != XRInterface.XR_NOT_TRACKING
+	)
+
+
+func _place_in_front_of_camera() -> bool:
+	if xr_camera == null or not is_instance_valid(xr_camera) or not xr_camera.is_inside_tree():
+		return false
+
+	var camera_transform := xr_camera.global_transform
+	var horizontal_forward := -camera_transform.basis.z
+	horizontal_forward.y = 0.0
+	if horizontal_forward.length_squared() < FORWARD_EPSILON_SQUARED:
+		horizontal_forward = global_position - camera_transform.origin
+		horizontal_forward.y = 0.0
+	if horizontal_forward.length_squared() < FORWARD_EPSILON_SQUARED:
+		horizontal_forward = Vector3.FORWARD
+	horizontal_forward = horizontal_forward.normalized()
+
+	var panel_position := camera_transform.origin + horizontal_forward * PANEL_DISTANCE_METERS
+	var panel_basis := Basis.looking_at(horizontal_forward, Vector3.UP)
+	global_transform = Transform3D(panel_basis, panel_position)
+	return true
 
 
 func set_fields(room: String, nickname: String) -> void:

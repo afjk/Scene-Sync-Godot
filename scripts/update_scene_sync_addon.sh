@@ -4,7 +4,9 @@ set -euo pipefail
 
 CANONICAL_REPOSITORY="https://github.com/afjk/afjk.jp.git"
 SOURCE_PATH="godot/addons/scene_sync"
+RAPIER_SOURCE_PATH="godot/addons/godot-rapier3d"
 VENDOR_PATH="addons/scene_sync"
+RAPIER_VENDOR_PATH="addons/godot-rapier3d"
 VERSION_FILENAME="scene-sync-version.txt"
 
 usage() {
@@ -27,6 +29,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null) || \
     die "the script must be run from a Git worktree"
 VENDOR_DIR="$REPO_ROOT/$VENDOR_PATH"
+RAPIER_VENDOR_DIR="$REPO_ROOT/$RAPIER_VENDOR_PATH"
 VERSION_FILE="$REPO_ROOT/$VERSION_FILENAME"
 
 commit_sha=""
@@ -71,25 +74,26 @@ if ! [[ "$commit_sha" =~ ^[0-9a-fA-F]{40}$ ]]; then
 fi
 commit_sha=$(printf '%s' "$commit_sha" | tr 'A-F' 'a-f')
 
-# Only a completely absent vendor directory and version file qualify as an
-# initial bootstrap. In every other state, tracked and untracked changes below
-# either managed target must be resolved before updating.
+# Only a completely absent pair of vendor directories and version file qualify
+# as an initial bootstrap. In every other state, tracked and untracked changes
+# below any managed target must be resolved before updating.
 initial_bootstrap=false
-if [ ! -e "$VENDOR_DIR" ] && [ ! -e "$VERSION_FILE" ]; then
+if [ ! -e "$VENDOR_DIR" ] && [ ! -e "$RAPIER_VENDOR_DIR" ] && [ ! -e "$VERSION_FILE" ]; then
     initial_bootstrap=true
 fi
 if [ "$initial_bootstrap" = false ]; then
     target_status=$(git -C "$REPO_ROOT" status --porcelain=v1 --untracked-files=all -- \
-        "$VENDOR_PATH" "$VERSION_FILENAME")
+        "$VENDOR_PATH" "$RAPIER_VENDOR_PATH" "$VERSION_FILENAME")
     [ -z "$target_status" ] || {
         echo "$target_status" >&2
-        die "local changes exist in the vendored addon or version file"
+        die "local changes exist in a vendored addon or the version file"
     }
 fi
 
 temp_root=$(mktemp -d "$REPO_ROOT/.scene-sync-update.XXXXXX")
 replacement_started=false
 vendor_existed=false
+rapier_vendor_existed=false
 version_existed=false
 
 cleanup() {
@@ -100,6 +104,12 @@ cleanup() {
             mv -- "$temp_root/old_vendor" "$VENDOR_DIR"
         elif [ "$vendor_existed" = false ]; then
             rm -rf -- "$VENDOR_DIR"
+        fi
+        if [ -d "$temp_root/old_rapier_vendor" ]; then
+            rm -rf -- "$RAPIER_VENDOR_DIR"
+            mv -- "$temp_root/old_rapier_vendor" "$RAPIER_VENDOR_DIR"
+        elif [ "$rapier_vendor_existed" = false ]; then
+            rm -rf -- "$RAPIER_VENDOR_DIR"
         fi
         if [ -f "$temp_root/old_version" ]; then
             rm -f -- "$VERSION_FILE"
@@ -129,15 +139,47 @@ resolved_commit=$(git -C "$source_git_dir" rev-parse --verify "$commit_sha^{comm
 
 git -C "$source_git_dir" cat-file -e "$commit_sha:$SOURCE_PATH/plugin.cfg" 2>/dev/null || \
     die "source addon is missing plugin.cfg at $SOURCE_PATH"
+git -C "$source_git_dir" cat-file -e "$commit_sha:$RAPIER_SOURCE_PATH/SCENESYNC_BUILD.txt" 2>/dev/null || \
+    die "source addon is missing Rapier build metadata at $RAPIER_SOURCE_PATH"
+git -C "$source_git_dir" cat-file -e "$commit_sha:$RAPIER_SOURCE_PATH/godot-rapier3d.gdextension" 2>/dev/null || \
+    die "source addon is missing the Rapier GDExtension descriptor at $RAPIER_SOURCE_PATH"
 
 mkdir -p "$temp_root/extract"
-git -C "$source_git_dir" archive "$commit_sha" "$SOURCE_PATH" | tar -x -C "$temp_root/extract"
+git -C "$source_git_dir" archive "$commit_sha" "$SOURCE_PATH" "$RAPIER_SOURCE_PATH" \
+    | tar -x -C "$temp_root/extract"
 staged_vendor="$temp_root/extract/$SOURCE_PATH"
+staged_rapier_vendor="$temp_root/extract/$RAPIER_SOURCE_PATH"
 [ -d "$staged_vendor" ] || die "archive did not contain $SOURCE_PATH"
+[ -d "$staged_rapier_vendor" ] || die "archive did not contain $RAPIER_SOURCE_PATH"
 
 addon_version=$(sed -n 's/^version="\([^"]*\)"$/\1/p' "$staged_vendor/plugin.cfg")
 [ -n "$addon_version" ] || die "could not read addon version from plugin.cfg"
 source_tree=$(git -C "$source_git_dir" rev-parse "$commit_sha:$SOURCE_PATH")
+rapier_source_tree=$(git -C "$source_git_dir" rev-parse "$commit_sha:$RAPIER_SOURCE_PATH")
+
+read_rapier_field() {
+    sed -n "s/^$1=//p" "$staged_rapier_vendor/SCENESYNC_BUILD.txt"
+}
+
+rapier_version=$(read_rapier_field version)
+rapier_repository=$(read_rapier_field source)
+rapier_tag=$(read_rapier_field tag)
+rapier_commit=$(read_rapier_field commit)
+rapier_core=$(read_rapier_field rapier)
+rapier_godot_runtime=$(read_rapier_field godot_runtime)
+rapier_platforms=$(read_rapier_field platforms)
+rapier_asset=$(read_rapier_field asset)
+rapier_asset_sha256=$(read_rapier_field asset_sha256)
+[ -n "$rapier_version" ] || die "could not read Rapier version from SCENESYNC_BUILD.txt"
+[ -n "$rapier_repository" ] || die "could not read Rapier source repository from SCENESYNC_BUILD.txt"
+[[ "$rapier_commit" =~ ^[0-9a-f]{40}$ ]] || die "Rapier commit is not a lowercase 40-character SHA"
+[ -n "$rapier_tag" ] || die "could not read Rapier tag from SCENESYNC_BUILD.txt"
+[ -n "$rapier_core" ] || die "could not read Rapier core version from SCENESYNC_BUILD.txt"
+[ -n "$rapier_godot_runtime" ] || die "could not read Rapier Godot runtime from SCENESYNC_BUILD.txt"
+[ -n "$rapier_platforms" ] || die "could not read Rapier platform matrix from SCENESYNC_BUILD.txt"
+[ -n "$rapier_asset" ] || die "could not read Rapier release asset from SCENESYNC_BUILD.txt"
+[[ "$rapier_asset_sha256" =~ ^[0-9a-f]{64}$ ]] || \
+    die "Rapier release asset SHA-256 is invalid"
 
 git -C "$source_git_dir" ls-tree -r --name-only "$commit_sha" -- "$SOURCE_PATH" \
     | sed "s#^$SOURCE_PATH/##" | LC_ALL=C sort > "$temp_root/source-manifest"
@@ -146,27 +188,50 @@ git -C "$source_git_dir" ls-tree -r --name-only "$commit_sha" -- "$SOURCE_PATH" 
 cmp -s "$temp_root/source-manifest" "$temp_root/vendor-manifest" || \
     die "extracted addon does not match the source tree manifest"
 
+git -C "$source_git_dir" ls-tree -r --name-only "$commit_sha" -- "$RAPIER_SOURCE_PATH" \
+    | sed "s#^$RAPIER_SOURCE_PATH/##" | LC_ALL=C sort > "$temp_root/rapier-source-manifest"
+(CDPATH= cd -- "$staged_rapier_vendor" && find . \( -type f -o -type l \) -print \
+    | sed 's#^\./##' | LC_ALL=C sort) > "$temp_root/rapier-vendor-manifest"
+cmp -s "$temp_root/rapier-source-manifest" "$temp_root/rapier-vendor-manifest" || \
+    die "extracted Rapier addon does not match the source tree manifest"
+
 cat > "$temp_root/new_version" <<EOF
 repository=$CANONICAL_REPOSITORY
 commit=$commit_sha
 source_path=$SOURCE_PATH
 source_tree=$source_tree
 addon_version=$addon_version
+rapier_source_path=$RAPIER_SOURCE_PATH
+rapier_source_tree=$rapier_source_tree
+rapier_repository=$rapier_repository
+rapier_tag=$rapier_tag
+rapier_commit=$rapier_commit
+rapier_version=$rapier_version
+rapier_core=$rapier_core
+rapier_godot_runtime=$rapier_godot_runtime
+rapier_platforms=$rapier_platforms
+rapier_asset=$rapier_asset
+rapier_asset_sha256=$rapier_asset_sha256
 EOF
 
 mkdir -p "$REPO_ROOT/addons"
 [ -e "$VENDOR_DIR" ] && vendor_existed=true
+[ -e "$RAPIER_VENDOR_DIR" ] && rapier_vendor_existed=true
 [ -e "$VERSION_FILE" ] && version_existed=true
 replacement_started=true
 if [ "$vendor_existed" = true ]; then
     mv -- "$VENDOR_DIR" "$temp_root/old_vendor"
+fi
+if [ "$rapier_vendor_existed" = true ]; then
+    mv -- "$RAPIER_VENDOR_DIR" "$temp_root/old_rapier_vendor"
 fi
 if [ "$version_existed" = true ]; then
     mv -- "$VERSION_FILE" "$temp_root/old_version"
 fi
 
 mv -- "$staged_vendor" "$VENDOR_DIR"
+mv -- "$staged_rapier_vendor" "$RAPIER_VENDOR_DIR"
 mv -- "$temp_root/new_version" "$VERSION_FILE"
 replacement_started=false
 
-echo "Vendored Scene Sync addon $addon_version at $commit_sha"
+echo "Vendored Scene Sync addon $addon_version and Rapier $rapier_version at $commit_sha"
