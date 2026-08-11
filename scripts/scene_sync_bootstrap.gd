@@ -5,6 +5,8 @@ const DEFAULT_ROOM_SETTING := "scene_sync/default_room"
 const USER_CONFIG_PATH := "user://scene_sync.cfg"
 const USER_CONFIG_SECTION := "connection"
 const CONNECT_STATUS_TIMEOUT_SECONDS := 10.0
+const PLAYBACK_CLOCK_LOCAL := 0
+const PLAYBACK_FOLLOWER_ONLY := 2
 const MANAGER_SCRIPT := preload("res://addons/scene_sync/scene_sync_manager.gd")
 
 @export var manager: Node
@@ -233,6 +235,14 @@ func _configure_manager(target: Node) -> void:
 	manager.set("auto_connect", false)
 	manager.set("presence_url", String(ProjectSettings.get_setting(PRESENCE_URL_SETTING, "")))
 	manager.set("sync_root", sync_root)
+	# XR clients never acquire Shared Playback control. They follow an active
+	# room controller and otherwise continue from the same time on the local
+	# monotonic clock.
+	manager.set("playback_clock_mode", PLAYBACK_CLOCK_LOCAL)
+	manager.set("playback_follow_policy", PLAYBACK_FOLLOWER_ONLY)
+	manager.set("allow_playback_control", false)
+	manager.call("set_playback_follow_policy", "follower-only")
+	manager.call("set_playback_control_allowed", false)
 	manager.connect(&"connected", _on_manager_connected)
 	manager.connect(&"disconnected", _on_manager_disconnected)
 	manager.connect(&"peers_updated", _on_peers_updated)

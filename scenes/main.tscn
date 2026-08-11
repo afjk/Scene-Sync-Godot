@@ -108,6 +108,8 @@ hand = 1
 script = ExtResource("4_scene_sync_manager")
 auto_connect = false
 sync_root = NodePath("../SceneSyncRoot")
+playback_follow_policy = 2
+allow_playback_control = false
 
 [node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root")]
 script = ExtResource("6_scene_sync_bootstrap")

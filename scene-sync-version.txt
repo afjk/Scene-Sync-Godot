@@ -1,8 +1,8 @@
 repository=https://github.com/afjk/afjk.jp.git
-commit=7289af0333b4288108adde06ffc5a0dba6852094
+commit=d1a7362028577fce55d120a35690e174580eec99
 source_path=godot/addons/scene_sync
-source_tree=7fe8a88ffcc1d9ebd30af364f6400d1d6fc98014
-addon_version=0.4.0
+source_tree=88bd8a1364750bc89c7b51e0c873ce1ae8020ca8
+addon_version=0.5.0
 rapier_source_path=godot/addons/godot-rapier3d
 rapier_source_tree=d15a59f4807f89061fb07eeb4007a047aab460ea
 rapier_repository=https://github.com/afjk/godot-rapier-physics

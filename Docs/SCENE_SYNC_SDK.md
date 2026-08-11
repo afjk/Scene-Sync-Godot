@@ -6,8 +6,8 @@ The Scene Sync Godot addon is developed in [`afjk/afjk.jp`](https://github.com/a
 
 - Repository: `https://github.com/afjk/afjk.jp.git`
 - Source paths: `godot/addons/scene_sync`, `godot/addons/godot-rapier3d`
-- Pinned commit: `7289af0333b4288108adde06ffc5a0dba6852094`
-- Addon version: `0.4.0`
+- Pinned commit: `d1a7362028577fce55d120a35690e174580eec99`
+- Addon version: `0.5.0`
 - Vendor destinations: `addons/scene_sync`, `addons/godot-rapier3d`
 
 Both complete source subtrees are vendored. This includes the C# Loomlet
@@ -20,13 +20,28 @@ Do not patch files below `addons/scene_sync` or `addons/godot-rapier3d`
 directly. Fix SDK defects in the upstream repository first, then update this
 repository to the resulting `afjk/afjk.jp` commit.
 
-Version `0.4.0` owns remote URL mesh, image, and text loading, bounded retry,
+Version `0.5.0` owns remote URL mesh, image, and text loading, bounded retry,
 safe asset-load diagnostics, and animation policy/default-loop handling. It
 also preserves GLB source animation order for numeric clip selection while
 keeping `clipName` precedence. It also synchronizes scene/object physics and
 drives the fixed-timestep `SceneSyncRapierWorld3D` runtime when the native
 extension is available. The application must not add a second asset or physics
 adapter for the same managed objects.
+
+The SDK also provides RoomNow anchoring and follower-only Shared Playback.
+This XR application fixes `playback_follow_policy` to `Follower Only` and
+`allow_playback_control` to `false`. It follows an authoritative room
+controller while its lease is valid and otherwise advances Animation, Loomlet,
+and Rapier from the rebased local monotonic clock. This policy must be applied
+both to the scene manager and to every fresh manager created after an explicit
+disconnect.
+
+Received transforms are applied before Rapier body registration in scene-add,
+scene-delta, and asynchronous mesh-replacement paths. If
+`physics.initialTransform` is omitted, the received `Node3D` position and
+rotation initialize the body. An explicit `initialTransform` remains
+authoritative, and explicit `halfExtents` or `radius` are collider dimensions
+that are not multiplied by visual scale.
 
 The Rapier dependency is pinned by upstream to tag
 `scenesync-v0.8.28-r0.30.0.3`, commit
