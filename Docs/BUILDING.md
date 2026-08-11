@@ -11,6 +11,9 @@
 | 開発用.NET SDK | `9.0`以上 |
 | Godot Android export templates | `4.6.3-stable`のMono templates |
 | Godot OpenXR Vendors | `5.1.0-stable` |
+| Scene Sync addon | `0.5.0` |
+| Scene Sync Rapier tag | `scenesync-v0.8.28-r0.30.0.3` |
+| Rapier core | `0.30.0` deterministic |
 | OpenJDK | `17` |
 | Android SDK Platform | `35` |
 | Android SDK Build-Tools | `35.0.1` |
@@ -19,7 +22,7 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.3.3`は`afjk/afjk.jp`のcommit `54b911cdccb40d22de3a55fd7c6853989d4a5ed3`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.5.0`とそのRapier runtimeは`afjk/afjk.jp`のcommit `d1a7362028577fce55d120a35690e174580eec99`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
 ## 1. Repositoryを取得する
 
@@ -28,7 +31,7 @@ git clone https://github.com/afjk/Scene-Sync-Godot.git
 cd Scene-Sync-Godot
 ```
 
-clone後に`addons/scene_sync`が存在することを確認します。通常のbuildでSDKをネットワークから取得し直す必要はありません。
+clone後に`addons/scene_sync`と`addons/godot-rapier3d`が存在することを確認します。通常のbuildでSDKやRapier native libraryをネットワークから取得し直す必要はありません。
 
 ## 2. 開発ツールを導入する
 
@@ -104,6 +107,17 @@ test -f addons/godotopenxrvendors/plugin.gdextension
 
 このaddonはdownload可能な依存物でありrepositoryには含まれません。CIも固定versionを毎回配置します。
 
+### Scene Sync Rapier GDExtension
+
+`addons/godot-rapier3d`はScene Sync SDKと同じupstream commitから完全vendorされています。別のRapier buildやAsset Library版で上書きしないでください。固定releaseのprovenanceとplatform matrixは次で確認できます。
+
+```bash
+cat addons/godot-rapier3d/SCENESYNC_BUILD.txt
+test -f addons/godot-rapier3d/bin/libgodot_rapier.android.aarch64-linux-android.so
+```
+
+同梱targetはmacOS universal、Android arm64、Linux x86_64、Windows x86_64です。対応native libraryがないplatformではScene Syncのphysics metadata同期は動作しますが、Rapier simulationは無効になります。
+
 ## 3. .NETをrestore・buildする
 
 Repository rootでCIと同じ順序で実行します。`SceneSyncGodot.sln`はGodot C# Android exportがprojectを解決するために必要なので、`.csproj`だけを直接buildせずsolutionを入口にします。
@@ -122,6 +136,8 @@ dotnet build SceneSyncGodot.sln --configuration Debug --no-restore
 ```
 
 GDScript parse error、C# assembly load error、OpenXR Vendors plugin load errorがないことを確認します。初回import完了前にexportへ進まないでください。
+
+Rapier対応platformではimport logにnative library load errorがなく、`SceneSyncRapierWorld3D`がClassDBへ登録される必要があります。登録されない場合、Scene Syncは安全にmetadata-onlyへfallbackしますが、deterministic physicsは実行されません。
 
 ## 5. Android Build TemplateとDebug APKを作る
 
@@ -158,6 +174,13 @@ mkdir -p build
 ```
 
 すべてDebug APKです。debug keystoreはGodot／Android build環境の標準Debug署名を使用し、release keyやcredentialは不要です。
+
+Android export後、APKに固定Rapier arm64 libraryが含まれることを確認できます。
+
+```bash
+unzip -l build/scene-sync-godot-quest3-debug.apk \
+  | grep 'lib/arm64-v8a/libgodot_rapier.android.aarch64-linux-android.so'
+```
 
 ## 6. ADBでinstall・起動する
 
@@ -225,7 +248,8 @@ packageは3 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 6. Web／Unity側からprimitiveを追加し、headsetの`SceneSyncRoot`以下へ同じ位置・回転・scaleで生成されることを確認します。
 7. transform変更、削除、後参加時の`scene-state`復元を確認します。
 8. GLB objectとLoomlet graphはprimitive同期の成立後に確認します。
-9. headsetをpause／resumeし、pause中にreconnect loopが発生せず、resume後に安全に再接続できることを確認します。
+9. Physics付きobjectとscene physicsを送信し、`SceneSyncRapierWorld3D`がfixed tickを進め、対応client間でcanonical hashが一致することを確認します。
+10. headsetをpause／resumeし、pause中にreconnect loopが発生せず、resume後に安全に再接続できることを確認します。
 
 `SceneSyncRoot`はXR rig外にあり、`XROrigin3D`、camera、hands、controllers、aim rayは同期対象に含まれません。
 
@@ -282,7 +306,7 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 
 ### Scene Syncが接続できない／詳細errorがpanelに出ない
 
-Scene Sync addon `0.3.3`の公開APIは接続状態、peer、object追加／削除signalに加え、URL asset取得のretry／失敗を`asset_load_diagnostic` signalで通知します。一方、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していないため、統合UIだけでは接続失敗の詳細原因を表示できない場合があります。
+Scene Sync addon `0.5.0`の公開APIは接続状態、peer、object追加／削除signalに加え、URL asset取得のretry／失敗を`asset_load_diagnostic` signalで通知します。一方、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していないため、統合UIだけでは接続失敗の詳細原因を表示できない場合があります。
 
 次を確認してください。
 
@@ -294,6 +318,14 @@ Scene Sync addon `0.3.3`の公開APIは接続状態、peer、object追加／削�
 URL assetの問題は`asset_load_diagnostic`の`status`、`attempt`、`reason`、`retryDelay`、`willRetry`も確認してください。このdiagnosticはURLやroom credentialを含みません。
 
 詳細errorが必要な場合でも、vendor済み`addons/scene_sync`をこのrepositoryだけで直接改変しないでください。SDK側にerror公開が必要なら`afjk/afjk.jp`で修正し、新しいcommitへpinを更新します。
+
+### Rapier simulationが無効になる
+
+- `addons/godot-rapier3d/SCENESYNC_BUILD.txt`と対象platformのnative libraryが存在することを確認します。
+- Godot `4.6.3`を使用し、GDExtension API `4.6`との互換性を維持します。
+- Godot logのnative library load errorと、Scene Syncの`physics_runtime_diagnostic`／`rapier_availability_changed`を確認します。
+- `get_rapier_status()`の`reason`が`rapier-addon-unavailable`ならmetadata-only fallbackです。
+- vendor済みbinaryや`scene_sync_rapier_bridge.gd`を直接patchせず、upstream pinを更新します。
 
 ### .NET Android固有のAOT／Loomlet error
 

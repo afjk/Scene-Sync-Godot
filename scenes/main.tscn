@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/simple_controller_model.tscn" id="2_controller_model"]
@@ -10,15 +10,6 @@
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
 background_color = Color(0, 0, 0, 0)
-
-[sub_resource type="StandardMaterial3D" id="Material_cube"]
-albedo_color = Color(1, 0.31, 0.08, 1)
-metallic = 0.15
-roughness = 0.32
-
-[sub_resource type="BoxMesh" id="BoxMesh_cube"]
-material = SubResource("Material_cube")
-size = Vector3(0.36, 0.36, 0.36)
 
 [sub_resource type="StandardMaterial3D" id="Material_left"]
 albedo_color = Color(0.05, 0.62, 1, 1)
@@ -77,9 +68,10 @@ tracker = &"right_hand"
 pose = &"aim"
 show_when_tracked = false
 
-[node name="SceneSyncStatusPanel" parent="XROrigin3D" node_paths=PackedStringArray("right_controller") instance=ExtResource("5_scene_sync_panel")]
+[node name="SceneSyncStatusPanel" parent="XROrigin3D" node_paths=PackedStringArray("right_controller", "xr_camera") instance=ExtResource("5_scene_sync_panel")]
 position = Vector3(0, 1.55, -1.2)
 right_controller = NodePath("../RightController")
+xr_camera = NodePath("../XRCamera3D")
 
 [node name="AimRay" type="MeshInstance3D" parent="XROrigin3D/RightController"]
 position = Vector3(0, 0, -0.4)
@@ -110,19 +102,14 @@ show_when_tracked = false
 [node name="ControllerModel" parent="XROrigin3D/RightGripController" instance=ExtResource("2_controller_model")]
 hand = 1
 
-[node name="Demo" type="Node3D" parent="."]
-
-[node name="Cube" type="MeshInstance3D" parent="Demo"]
-position = Vector3(0, 1.4, -1.5)
-rotation_degrees = Vector3(12, 24, 4)
-mesh = SubResource("BoxMesh_cube")
-
 [node name="SceneSyncRoot" type="Node3D" parent="."]
 
 [node name="SceneSyncManager" type="Node" parent="." node_paths=PackedStringArray("sync_root")]
 script = ExtResource("4_scene_sync_manager")
 auto_connect = false
 sync_root = NodePath("../SceneSyncRoot")
+playback_follow_policy = 2
+allow_playback_control = false
 
 [node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root")]
 script = ExtResource("6_scene_sync_bootstrap")

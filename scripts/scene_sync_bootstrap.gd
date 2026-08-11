@@ -5,6 +5,8 @@ const DEFAULT_ROOM_SETTING := "scene_sync/default_room"
 const USER_CONFIG_PATH := "user://scene_sync.cfg"
 const USER_CONFIG_SECTION := "connection"
 const CONNECT_STATUS_TIMEOUT_SECONDS := 10.0
+const PLAYBACK_CLOCK_LOCAL := 0
+const PLAYBACK_FOLLOWER_ONLY := 2
 const MANAGER_SCRIPT := preload("res://addons/scene_sync/scene_sync_manager.gd")
 
 @export var manager: Node
@@ -71,9 +73,8 @@ func _on_connect_requested(room: String, nickname: String) -> void:
 	if not presence_url.begins_with("wss://") and not presence_url.begins_with("ws://"):
 		_reject_connection("Presence URL must use ws:// or wss://.")
 		return
-	if room == "":
-		_reject_connection("Room code is required.")
-		return
+	# An empty room intentionally omits ?room= so the server assigns its
+	# source-IP-derived LAN room, matching the Web client.
 	if nickname == "":
 		_reject_connection("Nickname is required.")
 		return
@@ -178,10 +179,14 @@ func _reject_connection(message: String) -> void:
 
 
 func _load_connection_settings() -> Dictionary:
+	return _load_connection_settings_from_path(USER_CONFIG_PATH)
+
+
+func _load_connection_settings_from_path(config_path: String) -> Dictionary:
 	var default_room := String(ProjectSettings.get_setting(DEFAULT_ROOM_SETTING, ""))
 	var default_nickname := _make_default_nickname()
 	var config := ConfigFile.new()
-	if config.load(USER_CONFIG_PATH) != OK:
+	if config.load(config_path) != OK:
 		return {"room": default_room, "nickname": default_nickname}
 	return {
 		"room": String(config.get_value(USER_CONFIG_SECTION, "room", default_room)),
@@ -230,6 +235,14 @@ func _configure_manager(target: Node) -> void:
 	manager.set("auto_connect", false)
 	manager.set("presence_url", String(ProjectSettings.get_setting(PRESENCE_URL_SETTING, "")))
 	manager.set("sync_root", sync_root)
+	# XR clients never acquire Shared Playback control. They follow an active
+	# room controller and otherwise continue from the same time on the local
+	# monotonic clock.
+	manager.set("playback_clock_mode", PLAYBACK_CLOCK_LOCAL)
+	manager.set("playback_follow_policy", PLAYBACK_FOLLOWER_ONLY)
+	manager.set("allow_playback_control", false)
+	manager.call("set_playback_follow_policy", "follower-only")
+	manager.call("set_playback_control_allowed", false)
 	manager.connect(&"connected", _on_manager_connected)
 	manager.connect(&"disconnected", _on_manager_disconnected)
 	manager.connect(&"peers_updated", _on_peers_updated)

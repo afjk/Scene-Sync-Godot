@@ -5,23 +5,62 @@
 The Scene Sync Godot addon is developed in [`afjk/afjk.jp`](https://github.com/afjk/afjk.jp), not in this repository.
 
 - Repository: `https://github.com/afjk/afjk.jp.git`
-- Source path: `godot/addons/scene_sync`
-- Pinned commit: `54b911cdccb40d22de3a55fd7c6853989d4a5ed3`
-- Addon version: `0.3.3`
-- Vendor destination: `addons/scene_sync`
+- Source paths: `godot/addons/scene_sync`, `godot/addons/godot-rapier3d`
+- Pinned commit: `d1a7362028577fce55d120a35690e174580eec99`
+- Addon version: `0.5.0`
+- Vendor destinations: `addons/scene_sync`, `addons/godot-rapier3d`
 
-The complete source subtree is vendored, including the C# Loomlet runner,
-`LoomletRuntime`, Godot `.uid` files, and editor plugin files. The exact pin and
-source tree object are recorded in `scene-sync-version.txt`.
+Both complete source subtrees are vendored. This includes the C# Loomlet
+runner, `LoomletRuntime`, Godot `.uid` files, editor plugin files, Rapier
+GDExtension descriptor, licenses, build provenance, and native libraries. The
+exact pin and both source tree objects are recorded in
+`scene-sync-version.txt`.
 
-Do not patch files below `addons/scene_sync` directly. Fix SDK defects in
-`afjk/afjk.jp` first, then update this repository to the resulting commit.
+Do not patch files below `addons/scene_sync` or `addons/godot-rapier3d`
+directly. Fix SDK defects in the upstream repository first, then update this
+repository to the resulting `afjk/afjk.jp` commit.
 
-Version `0.3.3` owns remote URL mesh, image, and text loading, bounded retry,
+Version `0.5.0` owns remote URL mesh, image, and text loading, bounded retry,
 safe asset-load diagnostics, and animation policy/default-loop handling. It
 also preserves GLB source animation order for numeric clip selection while
-keeping `clipName` precedence. The application must not add a second asset
+keeping `clipName` precedence. It also synchronizes scene/object physics and
+drives the fixed-timestep `SceneSyncRapierWorld3D` runtime when the native
+extension is available. The application must not add a second asset or physics
 adapter for the same managed objects.
+
+The SDK also provides RoomNow anchoring and follower-only Shared Playback.
+This XR application fixes `playback_follow_policy` to `Follower Only` and
+`allow_playback_control` to `false`. It follows an authoritative room
+controller while its lease is valid and otherwise advances Animation, Loomlet,
+and Rapier from the rebased local monotonic clock. This policy must be applied
+both to the scene manager and to every fresh manager created after an explicit
+disconnect.
+
+Received transforms are applied before Rapier body registration in scene-add,
+scene-delta, and asynchronous mesh-replacement paths. If
+`physics.initialTransform` is omitted, the received `Node3D` position and
+rotation initialize the body. An explicit `initialTransform` remains
+authoritative, and explicit `halfExtents` or `radius` are collider dimensions
+that are not multiplied by visual scale.
+
+The Rapier dependency is pinned by upstream to tag
+`scenesync-v0.8.28-r0.30.0.3`, commit
+`b0578430c3b975bcf3bc0ee86df0450b51a57eb0`, Rapier core `0.30.0`. The
+combined release asset is `scenesync-godot-rapier3d-addon.zip` with SHA-256
+`90dbbbef3ddfd4e9d6fa34bed713dd1417a2ead70bbde668de6857c131cafbae`.
+Its included platforms are macOS universal, Android arm64, Linux x86_64, and
+Windows x86_64, and it targets Godot `4.6.3` / extension API `4.6`.
+
+The vendored directory is sourced from `afjk.jp`, not unpacked directly from
+the release ZIP. Upstream adds the `source`, `tag`, `asset`, and
+`asset_sha256` provenance lines to `SCENESYNC_BUILD.txt` after assembling the
+release. Apart from those metadata lines, its descriptor, licenses, signatures,
+and four platform binaries match the pinned release asset.
+
+If the GDExtension is missing or unsupported, Scene Sync continues to load and
+synchronize physics dictionaries, but reports `rapier-addon-unavailable` and
+does not simulate them. This is a safe metadata fallback, not deterministic
+physics parity.
 
 ## Updating
 
@@ -46,15 +85,16 @@ scripts/update_scene_sync_addon.sh <40-character-commit-sha> \
   --source-repo ../afjk.jp
 ```
 
-The script checks only `addons/scene_sync` and `scene-sync-version.txt` for
-local changes. Unrelated worktree changes do not block an update. It retrieves
-and validates the commit, source path, addon version, and complete file
-manifest in a temporary directory before replacing either managed target.
-Files removed upstream are therefore removed locally, while a retrieval or
-validation failure leaves the existing vendor and version file intact.
+The script checks only `addons/scene_sync`, `addons/godot-rapier3d`, and
+`scene-sync-version.txt` for local changes. Unrelated worktree changes do not
+block an update. It retrieves and validates the commit, both source paths,
+addon and Rapier build metadata, and both complete file manifests in a
+temporary directory before replacing any managed target. Files removed
+upstream are therefore removed locally, while a retrieval or validation
+failure leaves both existing vendors and the version file intact.
 
-The initial-bootstrap exception applies only when both `addons/scene_sync` and
-`scene-sync-version.txt` are absent. If either target already exists, the
+The initial-bootstrap exception applies only when both vendor directories and
+`scene-sync-version.txt` are all absent. If any target already exists, the
 script applies the normal dirty check regardless of whether the files are
 tracked. A partially copied addon, an untracked version file, or an entirely
 untracked vendor tree must therefore be removed or committed before retrying.
@@ -82,15 +122,21 @@ For a direct, reliable tree comparison, use a temporary archive and `diff`:
 commit=$(sed -n 's/^commit=//p' scene-sync-version.txt)
 tmp_dir=$(mktemp -d)
 trap 'rm -rf -- "$tmp_dir"' EXIT
-git -C ../afjk.jp archive "$commit" godot/addons/scene_sync | tar -x -C "$tmp_dir"
+git -C ../afjk.jp archive "$commit" \
+  godot/addons/scene_sync godot/addons/godot-rapier3d | tar -x -C "$tmp_dir"
 diff -ru "$tmp_dir/godot/addons/scene_sync" addons/scene_sync
+diff -ru "$tmp_dir/godot/addons/godot-rapier3d" addons/godot-rapier3d
 ```
 
 Then validate the runtime integration:
 
 1. Open the project with the pinned Godot .NET editor and complete import.
 2. Run `dotnet restore` and `dotnet build` for the Godot C# project.
-3. Confirm the SceneSync plugin loads without GDScript or C# errors.
-4. Export an Android arm64 Debug APK with the matching .NET export templates.
-5. Join the same room as the Web viewer and test `scene-state`, add, transform,
+3. Confirm the SceneSync plugin and `SceneSyncRapierWorld3D` class load without
+   GDScript, C#, or native-library errors.
+4. Run a fixed-tick Rapier smoke and compare its canonical hash with the
+   upstream parity fixture.
+5. Export an Android arm64 Debug APK with the matching .NET export templates,
+   and verify the APK contains the Rapier Android arm64 `.so`.
+6. Join the same room as the Web viewer and test `scene-state`, add, transform,
    remove, reconnect, GLB orientation, and Loomlet graph evaluation.

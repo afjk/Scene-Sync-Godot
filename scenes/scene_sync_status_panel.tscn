@@ -92,7 +92,7 @@ text = "Room code"
 [node name="RoomEdit" type="LineEdit" parent="SceneSyncViewport/Interface/FullPanel/Margin/Content/RoomRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Enter room code"
+placeholder_text = "LAN (automatic) or room code"
 virtual_keyboard_enabled = false
 clear_button_enabled = true
 

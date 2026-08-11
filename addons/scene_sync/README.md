@@ -6,6 +6,8 @@ Godot Engine 4.x addon for `afjk.jp/scenesync`.
 
 Copy `godot/addons/scene_sync` into your Godot project's `addons/scene_sync`, then enable `SceneSync` from `Project Settings > Plugins`.
 
+Deterministic physics additionally uses the vendored `godot/addons/godot-rapier3d` GDExtension. Copy that directory unchanged when physics execution is required. SceneSync continues to load and synchronize physics metadata safely when the extension is absent; only simulation is disabled.
+
 ## Editor
 
 Enable the plugin, open the dock on the right side, then set:
@@ -15,6 +17,8 @@ Enable the plugin, open the dock on the right side, then set:
 - `Name`: display name
 
 Use `Connect` to join the room and `Sync Meshes` to export local meshes as `.glb` and publish them through the blob store.
+
+The Editor dock synchronizes scene data and physics metadata, but Godot exposes runtime GDExtension classes as placeholders while the editor is active. Rapier simulation therefore starts only when the scene is run with **Play**. Disconnect the Editor dock before Play if the runtime `SceneSyncManager` uses the same room, so the editor and game do not appear as two peers.
 
 ## Runtime
 
@@ -62,13 +66,38 @@ Missing animation fields in ordinary deltas preserve the current policy. Policy 
 
 ## Playback clock
 
-`SceneSyncManager` supports Local, Shared Playback Follow, and Shared Playback Control modes through `playback_clock_mode`. Use `use_local_playback()`, `follow_shared_playback()`, `control_shared_playback()`, or `set_playback_clock_mode(mode)` at runtime, and inspect `get_playback_clock_state()`. Control mode publishes bounded `scene-clock` updates at `playback_clock_broadcast_interval` (minimum 0.05 seconds); Follow mode accepts newer remote revisions. `playback_clock_state_changed(state)` reports mode and clock changes.
+`SceneSyncManager` supports Local, Shared Playback Follow, Shared Playback Control, and Room Time modes through `playback_clock_mode`. Use `use_local_playback()`, `follow_shared_playback()`, `control_shared_playback()`, `use_room_time()`, or `set_playback_clock_mode(mode)` at runtime, and inspect `get_playback_clock_state()`.
 
-In Follow and Control modes, remote-created managed `AnimationPlayer` clips are sampled from the shared object clock. Sampling applies `time * speed + offset`, modulo clip duration for loop mode and clamped for once mode, while freezing local animation advance. Authored/bound Godot animations are not sampled. Returning to Local resumes ordinary animation-policy playback for remote-created nodes, including when the exported mode property is changed directly.
+`welcome.serverTime` is captured as a RoomNow anchor. Received shared clocks are anchored to the local monotonic clock at receipt; a follower never extrapolates with the difference between its wall clock and the sender's `sentAt`. `serverTime` and `sentAt` are Unix milliseconds, while `roomNow`, `offset`, `pausedTime`, `time`, and `targetTime` are seconds. Canonical payloads may also carry `active`, `controller`, `leaseExpiresAt` (Unix milliseconds), and `leaseDurationMs`. Legacy payloads without those fields remain supported.
 
-## Physics metadata
+Control mode supports `pause_playback_clock()`, `resume_playback_clock()`, `seek_playback_clock(time)`, `reset_playback_clock()`, and `set_playback_rate(rate)`. These publish the compatible `pause`, `play`, `seek`, `reset`, and `rate` operations. `release_playback_control()` publishes a release and immediately rebases to local monotonic 1x time; it does not wait for the server echo. Room Time continuously exposes RoomNow and does not accept transport operations.
 
-Godot preserves, but does not execute, the raw `physics` dictionaries used by SceneSync. Scene physics is available through `get_scene_physics()` and `scene_physics_changed(physics)`. Object physics is deep-copied into the `scene_sync_physics` node metadata key and available through `get_object_physics(object_id)` and `object_physics_changed(object_id, node, physics)`.
+Control capability and follow behavior are separate. Set `allow_playback_control` to disable controller acquisition, and choose `playback_follow_policy` from Manual, Auto Follow or Local, and Follower Only. Follower Only always has effective `allowControl: false` and never emits a controller acquisition. Auto Follow or Local and Follower Only follow only while an authoritative controller is active; release, peer disappearance, disconnect, or lease expiry rebases the last displayed Shared Time and ObjectAge to local monotonic 1x time without a reset.
+
+Control mode publishes bounded `scene-clock` updates at `playback_clock_broadcast_interval` (minimum 0.05 seconds); Follow mode accepts newer remote revisions. `playback_clock_state_changed(state)` reports configured and effective mode, policy, controller, lease, pause, and rate state.
+
+In Follow, Control, and Room Time modes, remote-created managed `AnimationPlayer` clips, Loomlet `scene.clock`, and Rapier all consume the same per-frame effective ActiveTime and ObjectAge sample. Sampling applies `time * speed + offset`, modulo clip duration for loop mode and clamped for once mode, while freezing local animation advance. Local transport operations and automatic Follow-to-Local fallback also use that shared manager sample. Untouched Local mode retains the existing ordinary animation and Loomlet delta behavior. Authored/bound Godot animations are not sampled.
+
+## Deterministic Rapier physics
+
+When scene physics has `enabled: true`, `SceneSyncManager` registers object physics dictionaries with `SceneSyncRapierWorld3D` and runs the same fixed-timestep Rapier 0.30 world used by the browser and Unity parity layer. Dynamic body position and rotation are applied to the corresponding Godot `Node3D`. Local playback follows monotonic time; shared Follow/Control modes derive the target physics tick from the shared playback clock.
+
+Received transforms are applied before physics registration. When `physics.initialTransform` is omitted, the body starts from that received `Node3D` position and rotation; an explicit `initialTransform` remains authoritative. Explicit `halfExtents` and `radius` are collider dimensions and are not multiplied by visual scale.
+
+Rapier execution is runtime-only in Godot: use **Play** or an exported build. Editor mode still receives, preserves, edits, and republishes physics metadata, and `get_rapier_status()` reports `rapier-runtime-requires-play` without invoking the placeholder extension instance.
+
+The vendored GDExtension is pinned to tag `scenesync-v0.8.28-r0.30.0.3`, commit `b0578430c3b975bcf3bc0ee86df0450b51a57eb0`. Its release asset SHA-256 and platform matrix are recorded in `godot-rapier3d/SCENESYNC_BUILD.txt`. Included targets are macOS universal, Android arm64 (Quest), Linux x86_64, and Windows x86_64.
+
+Use `get_rapier_status()` or `get_rapier_bridge()` to inspect availability, active state, fixed tick, and canonical state hash. Runtime signals are:
+
+- `rapier_availability_changed(available)`
+- `physics_runtime_state_changed(state)`
+- `physics_hash_checked(report)`
+- `physics_runtime_diagnostic(detail)`
+
+The manager broadcasts canonical `scene-physics-hash` reports at `rapier_hash_broadcast_interval_ticks` and verifies compatible remote reports against profile `SceneSyncRapierParity-0.30`, hash contract `SceneSyncCanonicalPhysicsHashV1`, and Rapier core `0.30.0`. Catch-up work is bounded by `rapier_max_steps_per_update`. Set `rapier_physics_enabled` to disable execution while retaining metadata synchronization.
+
+Scene physics metadata remains available through `get_scene_physics()` and `scene_physics_changed(physics)`. Object physics is deep-copied into the `scene_sync_physics` node metadata key and available through `get_object_physics(object_id)` and `object_physics_changed(object_id, node, physics)`.
 
 Physics metadata round-trips through scene state, add, delta, mesh replacement, cache recovery, and locally built payloads. An omitted field preserves the current dictionary; explicit `physics: null` clears it.
 
