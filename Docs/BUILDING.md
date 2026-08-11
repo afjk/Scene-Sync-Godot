@@ -11,7 +11,7 @@
 | 開発用.NET SDK | `9.0`以上 |
 | Godot Android export templates | `4.6.3-stable`のMono templates |
 | Godot OpenXR Vendors | `5.1.0-stable` |
-| Scene Sync addon | `0.5.0` |
+| Scene Sync addon | `0.5.1` |
 | Scene Sync Rapier tag | `scenesync-v0.8.28-r0.30.0.3` |
 | Rapier core | `0.30.0` deterministic |
 | OpenJDK | `17` |
@@ -22,7 +22,7 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.5.0`とそのRapier runtimeは`afjk/afjk.jp`のcommit `d1a7362028577fce55d120a35690e174580eec99`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `c5e373b6207b194b11ef3ee34c392cd891052070`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
 ## 1. Repositoryを取得する
 
@@ -306,7 +306,7 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 
 ### Scene Syncが接続できない／詳細errorがpanelに出ない
 
-Scene Sync addon `0.5.0`の公開APIは接続状態、peer、object追加／削除signalに加え、URL asset取得のretry／失敗を`asset_load_diagnostic` signalで通知します。一方、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していないため、統合UIだけでは接続失敗の詳細原因を表示できない場合があります。
+Scene Sync addon `0.5.1`の公開APIは接続状態、peer、object追加／削除signalに加え、URL asset取得のretry／失敗を`asset_load_diagnostic` signalで通知します。一方、WebSocket接続失敗やsend失敗の詳細を返すpublic error signal／`last_error`は提供していないため、統合UIだけでは接続失敗の詳細原因を表示できない場合があります。
 
 次を確認してください。
 

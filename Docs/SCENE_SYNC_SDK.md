@@ -6,8 +6,8 @@ The Scene Sync Godot addon is developed in [`afjk/afjk.jp`](https://github.com/a
 
 - Repository: `https://github.com/afjk/afjk.jp.git`
 - Source paths: `godot/addons/scene_sync`, `godot/addons/godot-rapier3d`
-- Pinned commit: `d1a7362028577fce55d120a35690e174580eec99`
-- Addon version: `0.5.0`
+- Pinned commit: `c5e373b6207b194b11ef3ee34c392cd891052070`
+- Addon version: `0.5.1`
 - Vendor destinations: `addons/scene_sync`, `addons/godot-rapier3d`
 
 Both complete source subtrees are vendored. This includes the C# Loomlet
@@ -20,13 +20,17 @@ Do not patch files below `addons/scene_sync` or `addons/godot-rapier3d`
 directly. Fix SDK defects in the upstream repository first, then update this
 repository to the resulting `afjk/afjk.jp` commit.
 
-Version `0.5.0` owns remote URL mesh, image, and text loading, bounded retry,
+Version `0.5.1` owns remote URL mesh, image, and text loading, bounded retry,
 safe asset-load diagnostics, and animation policy/default-loop handling. It
 also preserves GLB source animation order for numeric clip selection while
 keeping `clipName` precedence. It also synchronizes scene/object physics and
 drives the fixed-timestep `SceneSyncRapierWorld3D` runtime when the native
 extension is available. The application must not add a second asset or physics
 adapter for the same managed objects.
+
+Remote-created nodes are excluded from name and Unity hierarchy-path fallback
+matching. Repeated Web paste operations can therefore create distinct objects
+with the same display name without rebinding to an earlier remote copy.
 
 The SDK also provides RoomNow anchoring and follower-only Shared Playback.
 This XR application fixes `playback_follow_policy` to `Follower Only` and
