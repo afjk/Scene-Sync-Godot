@@ -84,6 +84,9 @@ jobs:
           - preset: VIVE Focus Vision Debug
             apk: scene-sync-godot-vive-focus-vision-debug.apk
             artifact: scene-sync-godot-vive-focus-vision-debug
+          - preset: Android XR Debug
+            apk: scene-sync-godot-android-xr-debug.apk
+            artifact: scene-sync-godot-android-xr-debug
 
     steps:
       - name: Checkout repository

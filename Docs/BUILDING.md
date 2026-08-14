@@ -1,6 +1,6 @@
 # Scene Sync Godot Build手順
 
-この文書は、別PCでcloneからAndroid Debug APKを再現し、Meta Quest 3、PICO 4 Ultra、VIVE Focus Visionへインストールするための手順です。release APK／AABの作成、署名鍵、ストア提出は対象外です。
+この文書は、別PCでcloneからAndroid Debug APKを再現し、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision、Android XR端末へインストールするための手順です。release APK／AABの作成、署名鍵、ストア提出は対象外です。
 
 ## 固定version
 
@@ -22,7 +22,7 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `af6ac1233a939b2e09510afc0336459e8630288d`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `c5e373b6207b194b11ef3ee34c392cd891052070`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `c5e373b6207b194b11ef3ee34c392cd891052070`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
 ## 1. Repositoryを取得する
 
@@ -173,6 +173,18 @@ mkdir -p build
   build/scene-sync-godot-vive-focus-vision-debug.apk
 ```
 
+### Android XR
+
+```bash
+mkdir -p build
+"$GODOT_BIN" --headless --path . \
+  --install-android-build-template \
+  --export-debug "Android XR Debug" \
+  build/scene-sync-godot-android-xr-debug.apk
+```
+
+`Android XR Debug` presetは`afjk/MR-Godot-Template`から取り込んだもので、Meta／PICO／Khronos loaderをすべて無効にし、Android XR loaderだけを有効にします。Android XRのpassthroughは標準OpenXRのAlpha environment blendで動作するため、ベンダー固有の追加設定はありません。Scene Sync側でこのpresetの実機確認は行っていません。
+
 すべてDebug APKです。debug keystoreはGodot／Android build環境の標準Debug署名を使用し、release keyやcredentialは不要です。
 
 Android export後、APKに固定Rapier arm64 libraryが含まれることを確認できます。
@@ -204,9 +216,13 @@ unzip -l build/scene-sync-godot-quest3-debug.apk \
 # VIVE Focus Vision
 <ANDROID_SDK_ROOT>/platform-tools/adb install -r \
   build/scene-sync-godot-vive-focus-vision-debug.apk
+
+# Android XR
+<ANDROID_SDK_ROOT>/platform-tools/adb install -r \
+  build/scene-sync-godot-android-xr-debug.apk
 ```
 
-packageは3 preset共通で`com.afjk.scenesyncgodot`です。コマンドから起動する場合は次を使用できます。
+packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから起動する場合は次を使用できます。
 
 ```bash
 <ANDROID_SDK_ROOT>/platform-tools/adb shell monkey \
@@ -236,7 +252,13 @@ packageは3 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 - OpenXR Vendors 5.1.0-stableではHTC Hand TrackingがAndroid manifest上でrequiredになります。
 - passthroughは`XR_HTC_passthrough`のplanar layerを使用します。projected passthroughやcamera image取得は対象外です。
 
-現時点ではQuest 3、PICO 4 Ultra、VIVE Focus Visionのすべてで実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
+### Android XR
+
+- `Android XR Debug` presetはAndroid XR loaderを使用し、Meta／PICO／Khronos loaderは無効です。
+- passthroughは標準OpenXRのAlpha environment blendで動作し、ベンダー固有のpassthrough設定はありません。
+- MR基盤側でもAndroid XR実機での確認は行われていません。
+
+現時点ではQuest 3、PICO 4 Ultra、VIVE Focus Vision、Android XRのすべてで実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
 
 ## 8. Scene Sync接続を確認する
 
@@ -255,15 +277,18 @@ packageは3 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 
 ## 9. Pull Requestのartifact
 
-`main`向けPull Requestまたは`workflow_dispatch`で、`.github/workflows/build-android-xr.yml`が上記と同じ固定versionを使って3 presetをbuildします。
+`main`向けPull Requestまたは`workflow_dispatch`で、`.github/workflows/build-android-xr.yml`が上記と同じ固定versionを使って4 presetをbuildします。
 
 | Preset | Artifact | APK |
 | --- | --- | --- |
 | `Meta Quest 3 Debug` | `scene-sync-godot-quest3-debug` | `scene-sync-godot-quest3-debug.apk` |
 | `PICO 4 Ultra Debug` | `scene-sync-godot-pico4-ultra-debug` | `scene-sync-godot-pico4-ultra-debug.apk` |
 | `VIVE Focus Vision Debug` | `scene-sync-godot-vive-focus-vision-debug` | `scene-sync-godot-vive-focus-vision-debug.apk` |
+| `Android XR Debug` | `scene-sync-godot-android-xr-debug` | `scene-sync-godot-android-xr-debug.apk` |
 
 artifactの保存期間は14日です。このworkflowはDebug APK専用です。
+
+`.github/workflows/static-checks.yml`は、追跡中の`.gd`のうち`addons/`以外へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`と`addons/godot-rapier3d`は対象外です。ローカルでは`pip install 'gdtoolkit==4.*'`のうえ`gdformat --diff scripts/`と`gdlint scripts/`で同じ確認ができます。
 
 ## 10. トラブルシューティング
 

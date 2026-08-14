@@ -1,0 +1,64 @@
+name: Static Checks
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gdscript:
+    name: GDScript format and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install gdtoolkit
+        run: python -m pip install --upgrade pip 'gdtoolkit==4.*'
+
+      - name: Collect tracked GDScript files
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # The OpenXR Vendors plugin is downloaded at build time and is not ours to lint.
+          git ls-files -z '*.gd' ':!:addons/**' > gdscript-files.txt
+
+          if [[ ! -s gdscript-files.txt ]]; then
+            echo "No GDScript files to check."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            tr '\0' '\n' < gdscript-files.txt
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check formatting (gdformat)
+        if: steps.collect.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xargs -0 -a gdscript-files.txt gdformat --diff
+
+      - name: Lint (gdlint)
+        if: steps.collect.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xargs -0 -a gdscript-files.txt gdlint
