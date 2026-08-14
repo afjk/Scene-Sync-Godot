@@ -4,7 +4,7 @@ Scene SyncのGodot addonを、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision向
 
 ## 固定しているsource
 
-- MR基盤: [`afjk/MR-Godot-Template`](https://github.com/afjk/MR-Godot-Template/tree/af6ac1233a939b2e09510afc0336459e8630288d) commit `af6ac1233a939b2e09510afc0336459e8630288d`
+- MR基盤: [`afjk/MR-Godot-Template`](https://github.com/afjk/MR-Godot-Template/tree/5d21cf1c7dcd7c1995dff28d02021eb412eda606) commit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`
 - Scene Sync SDK: [`afjk/afjk.jp` のGodot addons](https://github.com/afjk/afjk.jp/tree/c5e373b6207b194b11ef3ee34c392cd891052070/godot/addons) commit `c5e373b6207b194b11ef3ee34c392cd891052070`、addon `0.5.1`
 - Scene Sync Rapier runtime: [`afjk/godot-rapier-physics`](https://github.com/afjk/godot-rapier-physics/releases/tag/scenesync-v0.8.28-r0.30.0.3) tag `scenesync-v0.8.28-r0.30.0.3`、commit `b0578430c3b975bcf3bc0ee86df0450b51a57eb0`、Rapier core `0.30.0`
 
@@ -15,8 +15,21 @@ SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記
 - Meta Quest 3
 - PICO 4 Ultra
 - VIVE Focus Vision
+- Android XR（MR基盤から取り込んだpresetのみ。Scene Sync側での確認は未実施）
 
-いずれもAndroid arm64のDebug APKを対象とします。現時点では3端末とも実機での起動・passthrough・Scene Sync接続を未検証です。CIやローカルでのbuild成功は実機動作確認の代わりにはなりません。
+いずれもAndroid arm64のDebug APKを対象とします。現時点ではすべての端末で実機での起動・passthrough・Scene Sync接続を未検証です。CIやローカルでのbuild成功は実機動作確認の代わりにはなりません。
+
+## MR基盤から取り込んだOpenXRの挙動
+
+`afjk/MR-Godot-Template`の`5d21cf1`時点の内容を取り込んでいます。Scene Sync固有の実装（demo cube削除、`SceneSyncRoot`、status panel）は維持したうえで、次が有効です。
+
+- runtimeが提供するコントローラー3Dモデルの表示。core `XR_EXT_render_model`（`OpenXRRenderModelManager`）とMeta `XR_FB_render_model`の両方を用意し、モデルを返した方を採用します。どちらも非対応なら従来の球マーカーへfallbackします。
+- `session_begun`で`maximum_refresh_rate`（既定90Hz）以下の最良のdisplay refresh rateを選び、`Engine.physics_ticks_per_second`を追従させます。Scene SyncのRapier runtimeは自前の固定timestepで進むため、この変更はdeterminismに影響しません。
+- Local Floor reference space、foveated rendering（High／dynamic）、MSAA 2xの推奨project設定。
+- コントローラー由来のHand Trackingでは`CONFORM_TO_CONTROLLER`、光学式では`UNOBSTRUCTED`へ`set_motion_range()`を切り替え。
+- 各export presetの`Enable Openxr Validation Layers`（既定は無効）と`xr/openxr/extensions/debug_utils=2`。
+
+XRフォーカスの扱いだけMR基盤から変更しています。上流の`scripts/main.gd`はフォーカス喪失時に`process_mode`を`PROCESS_MODE_DISABLED`にしてsubtree全体を止めますが、このリポジトリでは`SceneSyncManager`が同じsubtreeにありWebSocketのpollを続ける必要があるため、`main.gd`自身の`_process`だけを止めます。アプリのbackground遷移は従来どおり`scene_sync_bootstrap.gd`の`NOTIFICATION_APPLICATION_PAUSED`で切断・再接続を扱います。
 
 ## Roomへ接続する
 
@@ -31,13 +44,22 @@ SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記
 
 ## Pull RequestのAPKを取得する
 
-`main`向けPull Requestでは`Build Android XR Debug APKs` workflowが3 presetをbuildします。workflow完了後、Actions runの`Artifacts`から次を取得します。
+`main`向けPull Requestでは`Build Android XR Debug APKs` workflowが4 presetをbuildします。workflow完了後、Actions runの`Artifacts`から次を取得します。
 
 - `scene-sync-godot-quest3-debug`
 - `scene-sync-godot-pico4-ultra-debug`
 - `scene-sync-godot-vive-focus-vision-debug`
+- `scene-sync-godot-android-xr-debug`
 
 Actions画面の`Run workflow`から手動実行もできます。生成物はDebug APKのみで、release用credentialは使用しません。
+
+あわせて`Static Checks` workflowが、`addons/`以外の追跡中`.gd`へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`と`addons/godot-rapier3d`は対象外です。ローカルでは次で同じ確認ができます。
+
+```bash
+pip install 'gdtoolkit==4.*'
+gdformat --diff scripts/
+gdlint scripts/
+```
 
 ## 詳細ドキュメント
 

@@ -146,9 +146,7 @@ func _on_manager_disconnected() -> void:
 func _on_peers_updated(peers: Array) -> void:
 	if _manager_is_connected():
 		status_panel.set_connection_state(
-			"Connected: %d peer%s" % [peers.size(), "" if peers.size() == 1 else "s"],
-			true,
-			false
+			"Connected: %d peer%s" % [peers.size(), "" if peers.size() == 1 else "s"], true, false
 		)
 
 

@@ -1,7 +1,7 @@
 extends OpenXRCompositionLayerQuad
 
 signal connect_requested(room: String, nickname: String)
-signal disconnect_requested()
+signal disconnect_requested
 
 const NO_INTERSECTION := Vector2(-1.0, -1.0)
 const FULL_QUAD_SIZE := Vector2(0.78, 0.52)
@@ -13,23 +13,6 @@ const FORWARD_EPSILON_SQUARED := 0.000001
 
 @export var right_controller: XRController3D
 @export var xr_camera: XRCamera3D
-
-@onready var viewport: SubViewport = $SceneSyncViewport
-@onready var cursor: Control = $SceneSyncViewport/Interface/Cursor
-@onready var full_panel: Control = $SceneSyncViewport/Interface/FullPanel
-@onready var minimized_panel: Control = $SceneSyncViewport/Interface/MinimizedPanel
-@onready var keyboard_panel: Control = $SceneSyncViewport/Interface/KeyboardPanel
-@onready var keyboard_target_label: Label = $SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Target
-@onready var keyboard_preview: LineEdit = $SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Preview
-@onready var keyboard_keys: GridContainer = $SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Keys
-@onready var keyboard_shift: Button = $SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands/Shift
-@onready var state_value: Label = $SceneSyncViewport/Interface/FullPanel/Margin/Content/StateRow/Value
-@onready var room_edit: LineEdit = $SceneSyncViewport/Interface/FullPanel/Margin/Content/RoomRow/RoomEdit
-@onready var nickname_edit: LineEdit = $SceneSyncViewport/Interface/FullPanel/Margin/Content/NicknameRow/NicknameEdit
-@onready var connect_button: Button = $SceneSyncViewport/Interface/FullPanel/Margin/Content/Buttons/Connect
-@onready var disconnect_button: Button = $SceneSyncViewport/Interface/FullPanel/Margin/Content/Buttons/Disconnect
-@onready var error_value: Label = $SceneSyncViewport/Interface/FullPanel/Margin/Content/ErrorValue
-@onready var object_count_value: Label = $SceneSyncViewport/Interface/FullPanel/Margin/Content/ObjectRow/Value
 
 var _was_pressed := false
 var _was_intersection := NO_INTERSECTION
@@ -44,6 +27,26 @@ var _openxr_interface: OpenXRInterface = null
 var _placement_frames_remaining := -1
 var _initial_placement_complete := false
 
+@onready var viewport: SubViewport = $SceneSyncViewport
+@onready var cursor: Control = $SceneSyncViewport/Interface/Cursor
+@onready var full_panel: Control = $SceneSyncViewport/Interface/FullPanel
+@onready var minimized_panel: Control = $SceneSyncViewport/Interface/MinimizedPanel
+@onready var keyboard_panel: Control = $SceneSyncViewport/Interface/KeyboardPanel
+# Resolved through the panels above; @onready vars initialize in declaration order,
+# and the relative paths keep these lines inside the 100 column lint limit.
+@onready var keyboard_target_label: Label = keyboard_panel.get_node(^"Margin/Content/Target")
+@onready var keyboard_preview: LineEdit = keyboard_panel.get_node(^"Margin/Content/Preview")
+@onready var keyboard_keys: GridContainer = keyboard_panel.get_node(^"Margin/Content/Keys")
+@onready var keyboard_shift: Button = keyboard_panel.get_node(^"Margin/Content/Commands/Shift")
+@onready var state_value: Label = full_panel.get_node(^"Margin/Content/StateRow/Value")
+@onready var room_edit: LineEdit = full_panel.get_node(^"Margin/Content/RoomRow/RoomEdit")
+@onready
+var nickname_edit: LineEdit = full_panel.get_node(^"Margin/Content/NicknameRow/NicknameEdit")
+@onready var connect_button: Button = full_panel.get_node(^"Margin/Content/Buttons/Connect")
+@onready var disconnect_button: Button = full_panel.get_node(^"Margin/Content/Buttons/Disconnect")
+@onready var error_value: Label = full_panel.get_node(^"Margin/Content/ErrorValue")
+@onready var object_count_value: Label = full_panel.get_node(^"Margin/Content/ObjectRow/Value")
+
 
 func _ready() -> void:
 	layer_viewport = viewport
@@ -51,15 +54,17 @@ func _ready() -> void:
 	cursor.visible = false
 	connect_button.pressed.connect(_on_connect_pressed)
 	disconnect_button.pressed.connect(_on_disconnect_pressed)
-	$SceneSyncViewport/Interface/FullPanel/Margin/Content/Header/Minimize.pressed.connect(set_minimized.bind(true))
-	$SceneSyncViewport/Interface/MinimizedPanel/Margin/Show.pressed.connect(set_minimized.bind(false))
+	full_panel.get_node(^"Margin/Content/Header/Minimize").pressed.connect(set_minimized.bind(true))
+	minimized_panel.get_node(^"Margin/Show").pressed.connect(set_minimized.bind(false))
 	room_edit.focus_entered.connect(_request_keyboard_edit.bind(room_edit, "Room code"))
 	nickname_edit.focus_entered.connect(_request_keyboard_edit.bind(nickname_edit, "Nickname"))
 	keyboard_shift.pressed.connect(_toggle_keyboard_case)
-	$SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands/Space.pressed.connect(_append_keyboard_text.bind(" "))
-	$SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands/Backspace.pressed.connect(_keyboard_backspace)
-	$SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands/Clear.pressed.connect(_keyboard_clear)
-	$SceneSyncViewport/Interface/KeyboardPanel/Margin/Content/Commands/Done.pressed.connect(_request_finish_keyboard_edit)
+
+	var keyboard_commands := keyboard_panel.get_node(^"Margin/Content/Commands")
+	keyboard_commands.get_node(^"Space").pressed.connect(_append_keyboard_text.bind(" "))
+	keyboard_commands.get_node(^"Backspace").pressed.connect(_keyboard_backspace)
+	keyboard_commands.get_node(^"Clear").pressed.connect(_keyboard_clear)
+	keyboard_commands.get_node(^"Done").pressed.connect(_request_finish_keyboard_edit)
 	_build_keyboard()
 	set_connection_state("Disconnected", false, false)
 	set_received_object_count(0)
@@ -90,10 +95,7 @@ func _process(_delta: float) -> void:
 		_suppress_pointer_until_release = false
 
 	var controller_transform := right_controller.global_transform
-	var intersection := intersects_ray(
-		controller_transform.origin,
-		-controller_transform.basis.z
-	)
+	var intersection := intersects_ray(controller_transform.origin, -controller_transform.basis.z)
 	if intersection == NO_INTERSECTION:
 		_release_pointer_if_needed()
 		return

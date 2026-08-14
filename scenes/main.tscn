@@ -92,6 +92,10 @@ show_when_tracked = false
 
 [node name="ControllerModel" parent="XROrigin3D/LeftGripController" instance=ExtResource("2_controller_model")]
 
+[node name="RenderModel" type="OpenXRRenderModelManager" parent="XROrigin3D/LeftGripController"]
+tracker = 2
+make_local_to_pose = "grip"
+
 [node name="RightGripController" type="XRController3D" parent="XROrigin3D"]
 visible = false
 position = Vector3(0.25, 1.25, -0.55)
@@ -101,6 +105,10 @@ show_when_tracked = false
 
 [node name="ControllerModel" parent="XROrigin3D/RightGripController" instance=ExtResource("2_controller_model")]
 hand = 1
+
+[node name="RenderModel" type="OpenXRRenderModelManager" parent="XROrigin3D/RightGripController"]
+tracker = 3
+make_local_to_pose = "grip"
 
 [node name="SceneSyncRoot" type="Node3D" parent="."]
 
