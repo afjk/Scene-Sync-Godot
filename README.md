@@ -5,7 +5,7 @@ Scene SyncのGodot addonを、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision向
 ## 固定しているsource
 
 - MR基盤: [`afjk/MR-Godot-Template`](https://github.com/afjk/MR-Godot-Template/tree/5d21cf1c7dcd7c1995dff28d02021eb412eda606) commit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`
-- Scene Sync SDK: [`afjk/afjk.jp` のGodot addons](https://github.com/afjk/afjk.jp/tree/c5e373b6207b194b11ef3ee34c392cd891052070/godot/addons) commit `c5e373b6207b194b11ef3ee34c392cd891052070`、addon `0.5.1`
+- Scene Sync SDK: [`afjk/afjk.jp` のGodot addons](https://github.com/afjk/afjk.jp/tree/3385e633c1710feb11636ad278ad106fe490ade5/godot/addons) commit `3385e633c1710feb11636ad278ad106fe490ade5`、addon `0.5.1`
 - Scene Sync Rapier runtime: [`afjk/godot-rapier-physics`](https://github.com/afjk/godot-rapier-physics/releases/tag/scenesync-v0.8.28-r0.30.0.3) tag `scenesync-v0.8.28-r0.30.0.3`、commit `b0578430c3b975bcf3bc0ee86df0450b51a57eb0`、Rapier core `0.30.0`
 
 SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記commitの`godot/addons/scene_sync`と`godot/addons/godot-rapier3d`を、それぞれ`addons/scene_sync`と`addons/godot-rapier3d`へ完全vendorしています。Rapier GDExtensionが利用できるplatformでは固定timestepのScene Sync physicsを実行し、利用できないplatformやextension欠落時もphysics metadataの同期を継続してsimulationだけを無効化します。

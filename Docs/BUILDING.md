@@ -22,7 +22,7 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `c5e373b6207b194b11ef3ee34c392cd891052070`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `3385e633c1710feb11636ad278ad106fe490ade5`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
 ## 1. Repositoryを取得する
 

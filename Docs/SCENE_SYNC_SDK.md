@@ -6,7 +6,7 @@ The Scene Sync Godot addon is developed in [`afjk/afjk.jp`](https://github.com/a
 
 - Repository: `https://github.com/afjk/afjk.jp.git`
 - Source paths: `godot/addons/scene_sync`, `godot/addons/godot-rapier3d`
-- Pinned commit: `c5e373b6207b194b11ef3ee34c392cd891052070`
+- Pinned commit: `3385e633c1710feb11636ad278ad106fe490ade5`
 - Addon version: `0.5.1`
 - Vendor destinations: `addons/scene_sync`, `addons/godot-rapier3d`
 
@@ -27,6 +27,12 @@ keeping `clipName` precedence. It also synchronizes scene/object physics and
 drives the fixed-timestep `SceneSyncRapierWorld3D` runtime when the native
 extension is available. The application must not add a second asset or physics
 adapter for the same managed objects.
+
+The pinned commit also detects `KHR_gaussian_splatting` GLBs and supports them
+in both the editor and runtime. With no renderer backend installed it uses the
+vendored dependency-free point preview. The optional full-quality
+`godot-gsplat` native renderer is not vendored by this repository and requires
+separate platform-specific installation and export validation.
 
 Remote-created nodes are excluded from name and Unity hierarchy-path fallback
 matching. Repeated Web paste operations can therefore create distinct objects
