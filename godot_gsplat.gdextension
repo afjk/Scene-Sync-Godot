@@ -4,6 +4,8 @@ compatibility_minimum = "4.5"
 reloadable = true
 
 [libraries]
+linux.debug.x86_64 = "res://addons/godot_gsplat/bin/linux-x86_64/libgodot_gsplat.so"
+linux.release.x86_64 = "res://addons/godot_gsplat/bin/linux-x86_64/libgodot_gsplat.so"
 macos.debug.arm64 = "res://addons/godot_gsplat/bin/macos-arm64/libgodot_gsplat.dylib"
 macos.release.arm64 = "res://addons/godot_gsplat/bin/macos-arm64/libgodot_gsplat.dylib"
 android.debug.arm64 = "res://addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so"

@@ -16,6 +16,7 @@
 | Rapier core | `0.30.0` deterministic |
 | godot-gsplat | commit `dfc8df4893f0f6e26c847590ff1669fa8404da6d` |
 | cargo-ndk | `4.1.2` |
+| Linux build container | `rust:1.94.0-bookworm@sha256:365468470075493dc4583f47387001854321c5a8583ea9604b297e67f01c5a4f` |
 | OpenJDK | `17` |
 | Android SDK Platform | `35` |
 | Android SDK Build-Tools | `35.0.1` |
@@ -124,7 +125,7 @@ test -f addons/godot-rapier3d/bin/libgodot_rapier.android.aarch64-linux-android.
 
 ### Gaussian Splat GDExtension
 
-`godot-gsplat`は`addons/godot_gsplat`へvendorし、rootの`godot_gsplat.gdextension`からnative libraryを解決します。本リポジトリに含むtargetはmacOS arm64とAndroid arm64です。
+`godot-gsplat`は`addons/godot_gsplat`へvendorし、rootの`godot_gsplat.gdextension`からnative libraryを解決します。本リポジトリに含むtargetはLinux x86_64、macOS arm64、Android arm64です。
 
 ```bash
 cat addons/godot_gsplat/SCENESYNC_BUILD.txt
@@ -139,6 +140,12 @@ Android binaryを再buildする場合はRust `1.94.0`、`cargo-ndk 4.1.2`、NDK 
 cargo install cargo-ndk --version 4.1.2 --locked
 scripts/build_godot_gsplat_android.sh \
   --ndk <ANDROID_SDK_ROOT>/ndk/28.1.13356709
+```
+
+Linux x86_64 binaryは固定digestのRust `1.94.0` containerを使用して再buildできます。
+
+```bash
+scripts/build_godot_gsplat_linux.sh
 ```
 
 SceneSync Webは`.ply`、`.sog`、`.spz`などを`KHR_gaussian_splatting` GLBへ正規化します。Godot側はこのGLBを受信し、native rendererで描画します。元のPLYをGodot SDKへ直接渡す経路はありません。
@@ -164,7 +171,7 @@ GDScript parse error、C# assembly load error、OpenXR Vendors plugin load error
 
 Rapier対応platformではimport logにnative library load errorがなく、`SceneSyncRapierWorld3D`がClassDBへ登録される必要があります。登録されない場合、Scene Syncは安全にmetadata-onlyへfallbackしますが、deterministic physicsは実行されません。
 
-macOS arm64とAndroid arm64では`GaussianSplatNode3D`もClassDBへ登録される必要があります。Scene SyncがGaussian Splatを読み込んだ際、`Gaussian Splat backend registered: godot-gsplat`が出力されることを確認します。`showing point-cloud preview`はnative backendを使用していないことを示します。
+Linux x86_64、macOS arm64、Android arm64では`GaussianSplatNode3D`もClassDBへ登録される必要があります。Scene SyncがGaussian Splatを読み込んだ際、`Gaussian Splat backend registered: godot-gsplat`が出力されることを確認します。`showing point-cloud preview`はnative backendを使用していないことを示します。
 
 ## 5. Android Build TemplateとDebug APKを作る
 

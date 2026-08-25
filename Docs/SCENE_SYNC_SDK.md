@@ -31,9 +31,10 @@ adapter for the same managed objects.
 The pinned commit also detects `KHR_gaussian_splatting` GLBs and supports them
 in both the editor and runtime. With no renderer backend installed it uses the
 vendored dependency-free point preview. This application additionally vendors
-the pinned `godot-gsplat` addon, descriptor, macOS arm64 library, and Android
-arm64 library under `addons/godot_gsplat`. It uses the Mobile renderer so the
-native backend can render Gaussian ellipses instead of selecting that preview.
+the pinned `godot-gsplat` addon, descriptor, Linux x86_64, macOS arm64, and
+Android arm64 libraries under `addons/godot_gsplat`. It uses the Mobile renderer
+so the native backend can render Gaussian ellipses instead of selecting that
+preview.
 
 `godot-gsplat` is a separate dependency from the two SDK subtrees above. It is
 pinned to commit `dfc8df4893f0f6e26c847590ff1669fa8404da6d`; its fixed Cargo
