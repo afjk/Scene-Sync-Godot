@@ -274,6 +274,14 @@ jobs:
           set -euo pipefail
           "$GODOT_BIN" --headless --path . --import
 
+      - name: Test Scene Sync avatars
+        if: matrix.preset == 'Meta Quest 3 Debug'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . \
+            --script res://tests/scene_sync_avatar_smoke.gd
+
       - name: Export ${{ matrix.preset }} APK
         shell: bash
         env:

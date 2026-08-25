@@ -1,11 +1,12 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/simple_controller_model.tscn" id="2_controller_model"]
 [ext_resource type="Script" path="res://scripts/DotNetAndroidSmoke.cs" id="3_dotnet_smoke"]
-[ext_resource type="Script" path="res://addons/scene_sync/scene_sync_manager.gd" id="4_scene_sync_manager"]
+[ext_resource type="Script" path="res://scripts/scene_sync_avatar_transport.gd" id="4_scene_sync_manager"]
 [ext_resource type="PackedScene" path="res://scenes/scene_sync_status_panel.tscn" id="5_scene_sync_panel"]
 [ext_resource type="Script" path="res://scripts/scene_sync_bootstrap.gd" id="6_scene_sync_bootstrap"]
+[ext_resource type="Script" path="res://scripts/scene_sync_avatar_manager.gd" id="7_avatar_manager"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -112,6 +113,8 @@ make_local_to_pose = "grip"
 
 [node name="SceneSyncRoot" type="Node3D" parent="."]
 
+[node name="RemoteAvatars" type="Node3D" parent="."]
+
 [node name="SceneSyncManager" type="Node" parent="." node_paths=PackedStringArray("sync_root")]
 script = ExtResource("4_scene_sync_manager")
 auto_connect = false
@@ -119,8 +122,17 @@ sync_root = NodePath("../SceneSyncRoot")
 playback_follow_policy = 2
 allow_playback_control = false
 
-[node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root")]
+[node name="SceneSyncAvatarManager" type="Node" parent="." node_paths=PackedStringArray("scene_sync_manager", "avatar_root", "xr_camera", "left_controller", "right_controller")]
+script = ExtResource("7_avatar_manager")
+scene_sync_manager = NodePath("../SceneSyncManager")
+avatar_root = NodePath("../RemoteAvatars")
+xr_camera = NodePath("../XROrigin3D/XRCamera3D")
+left_controller = NodePath("../XROrigin3D/LeftGripController")
+right_controller = NodePath("../XROrigin3D/RightGripController")
+
+[node name="SceneSyncBootstrap" type="Node" parent="." node_paths=PackedStringArray("manager", "status_panel", "sync_root", "avatar_manager")]
 script = ExtResource("6_scene_sync_bootstrap")
 manager = NodePath("../SceneSyncManager")
 status_panel = NodePath("../XROrigin3D/SceneSyncStatusPanel")
 sync_root = NodePath("../SceneSyncRoot")
+avatar_manager = NodePath("../SceneSyncAvatarManager")

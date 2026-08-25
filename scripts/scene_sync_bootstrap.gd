@@ -7,11 +7,12 @@ const USER_CONFIG_SECTION := "connection"
 const CONNECT_STATUS_TIMEOUT_SECONDS := 10.0
 const PLAYBACK_CLOCK_LOCAL := 0
 const PLAYBACK_FOLLOWER_ONLY := 2
-const MANAGER_SCRIPT := preload("res://addons/scene_sync/scene_sync_manager.gd")
+const MANAGER_SCRIPT := preload("res://scripts/scene_sync_avatar_transport.gd")
 
 @export var manager: Node
 @export var status_panel: Node
 @export var sync_root: Node3D
+@export var avatar_manager: Node
 
 var _received_object_ids: Dictionary = {}
 var _wants_connection := false
@@ -24,8 +25,10 @@ var _connection_generation := 0
 
 
 func _ready() -> void:
-	if manager == null or status_panel == null or sync_root == null:
-		push_error("[SceneSync] Bootstrap requires manager, status panel, and sync root nodes.")
+	if manager == null or status_panel == null or sync_root == null or avatar_manager == null:
+		push_error(
+			"[SceneSync] Bootstrap requires manager, status panel, sync root, and avatar manager nodes."
+		)
 		set_process(false)
 		return
 
@@ -246,6 +249,7 @@ func _configure_manager(target: Node) -> void:
 	manager.connect(&"peers_updated", _on_peers_updated)
 	manager.connect(&"object_added", _on_object_added)
 	manager.connect(&"object_removed", _on_object_removed)
+	avatar_manager.call("set_scene_sync_manager", manager)
 
 
 func _disconnect_manager_signals(target: Node) -> void:
