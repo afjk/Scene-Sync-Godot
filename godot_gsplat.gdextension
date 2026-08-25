@@ -1,0 +1,10 @@
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = "4.5"
+reloadable = true
+
+[libraries]
+macos.debug.arm64 = "res://addons/godot_gsplat/bin/macos-arm64/libgodot_gsplat.dylib"
+macos.release.arm64 = "res://addons/godot_gsplat/bin/macos-arm64/libgodot_gsplat.dylib"
+android.debug.arm64 = "res://addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so"
+android.release.arm64 = "res://addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so"
