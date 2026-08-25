@@ -14,6 +14,9 @@
 | Scene Sync addon | `0.5.1` |
 | Scene Sync Rapier tag | `scenesync-v0.8.28-r0.30.0.3` |
 | Rapier core | `0.30.0` deterministic |
+| godot-gsplat | commit `dfc8df4893f0f6e26c847590ff1669fa8404da6d` |
+| cargo-ndk | `4.1.2` |
+| Linux build container | `rust:1.94.0-bookworm@sha256:365468470075493dc4583f47387001854321c5a8583ea9604b297e67f01c5a4f` |
 | OpenJDK | `17` |
 | Android SDK Platform | `35` |
 | Android SDK Build-Tools | `35.0.1` |
@@ -22,7 +25,9 @@
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
-MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `c5e373b6207b194b11ef3ee34c392cd891052070`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `3385e633c1710feb11636ad278ad106fe490ade5`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
+
+Gaussian Splatの実rendererは`shiena/godot-gsplat`の固定commitからbuildし、macOS arm64とAndroid arm64のnative libraryをrepositoryにvendorしています。Android binaryは上記NDK、固定Cargo.lock、Scene Syncのpush-constant compatibility patchを使用します。
 
 ## 1. Repositoryを取得する
 
@@ -31,7 +36,7 @@ git clone https://github.com/afjk/Scene-Sync-Godot.git
 cd Scene-Sync-Godot
 ```
 
-clone後に`addons/scene_sync`と`addons/godot-rapier3d`が存在することを確認します。通常のbuildでSDKやRapier native libraryをネットワークから取得し直す必要はありません。
+clone後に`addons/scene_sync`、`addons/godot-rapier3d`、`addons/godot_gsplat`、`godot_gsplat.gdextension`が存在することを確認します。通常のbuildでSDKやnative libraryをネットワークから取得し直す必要はありません。
 
 ## 2. 開発ツールを導入する
 
@@ -118,6 +123,33 @@ test -f addons/godot-rapier3d/bin/libgodot_rapier.android.aarch64-linux-android.
 
 同梱targetはmacOS universal、Android arm64、Linux x86_64、Windows x86_64です。対応native libraryがないplatformではScene Syncのphysics metadata同期は動作しますが、Rapier simulationは無効になります。
 
+### Gaussian Splat GDExtension
+
+`godot-gsplat`は`addons/godot_gsplat`へvendorし、rootの`godot_gsplat.gdextension`からnative libraryを解決します。本リポジトリに含むtargetはLinux x86_64、macOS arm64、Android arm64です。
+
+```bash
+cat addons/godot_gsplat/SCENESYNC_BUILD.txt
+test -f godot_gsplat.gdextension
+test -f addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so
+file addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so
+```
+
+Android binaryを再buildする場合はRust `1.94.0`、`cargo-ndk 4.1.2`、NDK `28.1.13356709`を用意し、固定スクリプトを実行します。既定binaryを直接上書きせず、まず`build/native`へ出力してSHA-256とAArch64 ELFを比較してください。
+
+```bash
+cargo install cargo-ndk --version 4.1.2 --locked
+scripts/build_godot_gsplat_android.sh \
+  --ndk <ANDROID_SDK_ROOT>/ndk/28.1.13356709
+```
+
+Linux x86_64 binaryは固定digestのRust `1.94.0` containerを使用して再buildできます。
+
+```bash
+scripts/build_godot_gsplat_linux.sh
+```
+
+SceneSync Webは`.ply`、`.sog`、`.spz`などを`KHR_gaussian_splatting` GLBへ正規化します。Godot側はこのGLBを受信し、native rendererで描画します。元のPLYをGodot SDKへ直接渡す経路はありません。
+
 ## 3. .NETをrestore・buildする
 
 Repository rootでCIと同じ順序で実行します。`SceneSyncGodot.sln`はGodot C# Android exportがprojectを解決するために必要なので、`.csproj`だけを直接buildせずsolutionを入口にします。
@@ -138,6 +170,8 @@ dotnet build SceneSyncGodot.sln --configuration Debug --no-restore
 GDScript parse error、C# assembly load error、OpenXR Vendors plugin load errorがないことを確認します。初回import完了前にexportへ進まないでください。
 
 Rapier対応platformではimport logにnative library load errorがなく、`SceneSyncRapierWorld3D`がClassDBへ登録される必要があります。登録されない場合、Scene Syncは安全にmetadata-onlyへfallbackしますが、deterministic physicsは実行されません。
+
+Linux x86_64、macOS arm64、Android arm64では`GaussianSplatNode3D`もClassDBへ登録される必要があります。Scene SyncがGaussian Splatを読み込んだ際、`Gaussian Splat backend registered: godot-gsplat`が出力されることを確認します。`showing point-cloud preview`はnative backendを使用していないことを示します。
 
 ## 5. Android Build TemplateとDebug APKを作る
 
@@ -187,11 +221,13 @@ mkdir -p build
 
 すべてDebug APKです。debug keystoreはGodot／Android build環境の標準Debug署名を使用し、release keyやcredentialは不要です。
 
-Android export後、APKに固定Rapier arm64 libraryが含まれることを確認できます。
+Android export後、APKに固定Rapierとgodot-gsplatのarm64 libraryが含まれることを確認できます。
 
 ```bash
 unzip -l build/scene-sync-godot-quest3-debug.apk \
   | grep 'lib/arm64-v8a/libgodot_rapier.android.aarch64-linux-android.so'
+unzip -l build/scene-sync-godot-quest3-debug.apk \
+  | grep 'lib/arm64-v8a/libgodot_gsplat.so'
 ```
 
 ## 6. ADBでinstall・起動する
@@ -239,6 +275,9 @@ packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 - `Meta Quest 3 Debug` presetはMeta OpenXR loader、passthrough required、Hand Tracking optionalを使用します。
 - Quest側でpassthrough、Hand Tracking、アプリ権限を有効にします。
 - Touch Controllerのaim ray、grip位置の球、controllerから光学式Hand Trackingへ切り替えた際の表示を確認します。
+- Godot logで`GaussianSplatNode3D`の登録と`godot-gsplat` backendの選択を確認します。
+- Gaussianが単なる色付きpointではなく楕円kernelとopacityで描画され、左右眼で破綻しないことを確認します。
+- XR profileのhead-center sorting、center depth、adaptive budgetでフレーム時間と白いちらつきを確認します。
 
 ### PICO 4 Ultra
 
@@ -258,7 +297,7 @@ packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 - passthroughは標準OpenXRのAlpha environment blendで動作し、ベンダー固有のpassthrough設定はありません。
 - MR基盤側でもAndroid XR実機での確認は行われていません。
 
-現時点ではQuest 3、PICO 4 Ultra、VIVE Focus Vision、Android XRのすべてで実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
+Quest 3では旧Compatibility構成でGaussian Splatがpoint-preview fallbackとして表示されるところまで確認済みです。Vulkan Mobileとnative rendererを使う実Gaussian描画、per-eye/stereoの見え、passthroughとの併用、性能は未検証です。PICO 4 Ultra、VIVE Focus Vision、Android XRも実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
 
 ## 8. Scene Sync接続を確認する
 
@@ -288,7 +327,7 @@ packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 
 artifactの保存期間は14日です。このworkflowはDebug APK専用です。
 
-`.github/workflows/static-checks.yml`は、追跡中の`.gd`のうち`addons/`以外へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`と`addons/godot-rapier3d`は対象外です。ローカルでは`pip install 'gdtoolkit==4.*'`のうえ`gdformat --diff scripts/`と`gdlint scripts/`で同じ確認ができます。
+`.github/workflows/static-checks.yml`は、追跡中の`.gd`のうち`addons/`以外へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`、`addons/godot-rapier3d`、`addons/godot_gsplat`は対象外です。ローカルでは`pip install 'gdtoolkit==4.*'`のうえ`gdformat --diff scripts/`と`gdlint scripts/`で同じ確認ができます。
 
 ## 10. トラブルシューティング
 
@@ -351,6 +390,18 @@ URL assetの問題は`asset_load_diagnostic`の`status`、`attempt`、`reason`�
 - Godot logのnative library load errorと、Scene Syncの`physics_runtime_diagnostic`／`rapier_availability_changed`を確認します。
 - `get_rapier_status()`の`reason`が`rapier-addon-unavailable`ならmetadata-only fallbackです。
 - vendor済みbinaryや`scene_sync_rapier_bridge.gd`を直接patchせず、upstream pinを更新します。
+
+### Gaussian Splatが色付き点群として表示される
+
+色付きpointはScene Syncのdependency-free previewです。実Gaussian rendererは回転、スケール、opacityを使って画面上の楕円kernelを描画します。次を確認します。
+
+- `project.godot`のPCとmobileの両方が`mobile`であること
+- `addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so`がAPKの`lib/arm64-v8a/libgodot_gsplat.so`に入っていること
+- `GaussianSplatNode3D`がClassDBに登録されていること
+- logに`Gaussian Splat backend registered: godot-gsplat`があり、`showing point-cloud preview`がないこと
+- Webが元データを`KHR_gaussian_splatting` GLBへ正規化していること。PLYをGodotへ直接渡すことはできません
+
+Questでのper-eye sorting、stereoの見え、passthrough、性能はnative libraryの読み込みとは別の実機受け入れ項目です。`dragon.compressed.ply`のようなSH0の軽量captureでは形状、opacity、sorting、性能を確認できますが、SH1〜SH3の視点依存色は別のfixtureが必要です。
 
 ### .NET Android固有のAOT／Loomlet error
 

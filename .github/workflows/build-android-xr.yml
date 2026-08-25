@@ -23,6 +23,11 @@ env:
   SCENE_SYNC_RAPIER_ASSET_SHA256: 90dbbbef3ddfd4e9d6fa34bed713dd1417a2ead70bbde668de6857c131cafbae
   SCENE_SYNC_RAPIER_LINUX_SHA256: eba85afa6f74362327bee1671a5b8ef2a025bf10676ea62faa33f9fcdedd9c7e
   SCENE_SYNC_RAPIER_ANDROID_SHA256: 8cbd6c0f566dd1333eb45917d8e923378b4c148c5b64df63fb12704e14f87caf
+  GODOT_GSPLAT_COMMIT: dfc8df4893f0f6e26c847590ff1669fa8404da6d
+  GODOT_GSPLAT_CARGO_LOCK_SHA256: 2d3687bac6d0e664b6fe95893b74a959f44941a0cabdc0c3627c99cda3239783
+  GODOT_GSPLAT_PATCH_SHA256: 86bc3f5591d79a3ffa5c5545f85fc50c9f4a32ed0f90110816a982a034011805
+  GODOT_GSPLAT_LINUX_SHA256: d791edc9c679c63636185ee2acfb5456a617168e459119071f8ae70b68322d62
+  GODOT_GSPLAT_ANDROID_SHA256: 751144ab013839c84a107f131c05733d82bfca07079180bbdff8ae71432f3e32
   TOOLCHAIN_CACHE_DIR: /home/runner/.cache/scene-sync-godot
 
 jobs:
@@ -107,6 +112,47 @@ jobs:
             "$SCENE_SYNC_RAPIER_LINUX_SHA256" "$LINUX_LIBRARY" \
             "$SCENE_SYNC_RAPIER_ANDROID_SHA256" "$ANDROID_LIBRARY" \
             | sha256sum --check --strict
+
+      - name: Verify vendored godot-gsplat renderer
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_INFO=addons/godot_gsplat/SCENESYNC_BUILD.txt
+          DESCRIPTOR=godot_gsplat.gdextension
+          CARGO_LOCK=scripts/third_party/godot-gsplat-Cargo.lock
+          COMPATIBILITY_PATCH=scripts/third_party/godot-gsplat-push-constant-padding.patch
+          LINUX_LIBRARY=addons/godot_gsplat/bin/linux-x86_64/libgodot_gsplat.so
+          ANDROID_LIBRARY=addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so
+
+          test -f "$DESCRIPTOR"
+          grep -Fxq "commit=$GODOT_GSPLAT_COMMIT" "$BUILD_INFO"
+          grep -Fxq "cargo_lock_sha256=$GODOT_GSPLAT_CARGO_LOCK_SHA256" "$BUILD_INFO"
+          grep -Fxq "compatibility_patch_sha256=$GODOT_GSPLAT_PATCH_SHA256" "$BUILD_INFO"
+          grep -Fxq "linux_binary_sha256=$GODOT_GSPLAT_LINUX_SHA256" "$BUILD_INFO"
+          grep -Fxq "android_binary_sha256=$GODOT_GSPLAT_ANDROID_SHA256" "$BUILD_INFO"
+          grep -Fq 'android.debug.arm64 = "res://addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so"' \
+            "$DESCRIPTOR"
+          grep -Fq 'linux.debug.x86_64 = "res://addons/godot_gsplat/bin/linux-x86_64/libgodot_gsplat.so"' \
+            "$DESCRIPTOR"
+          printf '%s  %s\n' \
+            "$GODOT_GSPLAT_CARGO_LOCK_SHA256" "$CARGO_LOCK" \
+            "$GODOT_GSPLAT_PATCH_SHA256" "$COMPATIBILITY_PATCH" \
+            "$GODOT_GSPLAT_LINUX_SHA256" "$LINUX_LIBRARY" \
+            "$GODOT_GSPLAT_ANDROID_SHA256" "$ANDROID_LIBRARY" \
+            | sha256sum --check --strict
+          file "$LINUX_LIBRARY" | grep -Fq \
+            'ELF 64-bit LSB shared object, x86-64'
+          readelf --file-header "$LINUX_LIBRARY" | grep -E \
+            'Machine:[[:space:]]+Advanced Micro Devices X86-64' >/dev/null
+          readelf --wide --dyn-syms "$LINUX_LIBRARY" | grep -E \
+            '[[:space:]]gdext_rust_init$' >/dev/null
+          file "$ANDROID_LIBRARY" | grep -Fq \
+            'ELF 64-bit LSB shared object, ARM aarch64'
+          readelf --file-header "$ANDROID_LIBRARY" | grep -E \
+            'Machine:[[:space:]]+AArch64' >/dev/null
+          readelf --wide --dyn-syms "$ANDROID_LIBRARY" | grep -E \
+            '[[:space:]]gdext_rust_init$' >/dev/null
 
       - name: Set up .NET 9
         uses: actions/setup-dotnet@v4
@@ -246,6 +292,9 @@ jobs:
           unzip -Z1 "$OUTPUT_APK" > "$APK_ENTRIES"
           grep -Fxq \
             'lib/arm64-v8a/libgodot_rapier.android.aarch64-linux-android.so' \
+            "$APK_ENTRIES"
+          grep -Fxq \
+            'lib/arm64-v8a/libgodot_gsplat.so' \
             "$APK_ENTRIES"
 
       - name: Upload APK artifact

@@ -1,0 +1,39 @@
+diff --git a/src/node/gpu_sort.rs b/src/node/gpu_sort.rs
+index 616e9d9..3c7d8a9 100644
+--- a/src/node/gpu_sort.rs
++++ b/src/node/gpu_sort.rs
+@@ -623,5 +623,6 @@
+-// Pack the 84-byte std430 push constant: column-major mat4, depth range, and the
+-// bucket/count/tex-width scalars. Matches the layout in the sort compute shaders.
++// Pack the 96-byte std430 push constant: column-major mat4, depth range, and the
++// bucket/count/tex-width scalars. The 12 trailing bytes pad the struct to its
++// 16-byte base alignment, which RenderingDevice validates at dispatch time.
+ fn build_sort_push_constant(
+     view: Transform3D,
+     depth_min: f32,
+@@ -635,7 +636,7 @@ fn build_sort_push_constant(
+         (view.basis.col_c(), 0.0_f32),
+         (view.origin, 1.0_f32),
+     ];
+-    let mut bytes: Vec<u8> = Vec::with_capacity(84);
++    let mut bytes: Vec<u8> = Vec::with_capacity(96);
+     for (column, w) in columns {
+         bytes.extend_from_slice(&column.x.to_le_bytes());
+         bytes.extend_from_slice(&column.y.to_le_bytes());
+@@ -647,5 +648,6 @@ fn build_sort_push_constant(
+     bytes.extend_from_slice(&(SORT_NUM_BUCKETS as u32).to_le_bytes());
+     bytes.extend_from_slice(&(count as u32).to_le_bytes());
+     bytes.extend_from_slice(&(tex_width as u32).to_le_bytes());
++    bytes.resize(96, 0);
+     PackedByteArray::from(bytes)
+ }
+diff --git a/src/node/shaders.rs b/src/node/shaders.rs
+index 6be375a..369ab0d 100644
+--- a/src/node/shaders.rs
++++ b/src/node/shaders.rs
+@@ -402,4 +402,4 @@
+-// All stages declare the same 84-byte push constant (the scan stages only read
++// All stages declare the same 96-byte std430 push constant (the scan stages only read
+ // num_buckets) so one push-constant value is valid for every dispatch in the list.
+ //
+ // Pass 2a: per-block exclusive prefix sum of the histogram into offsets, plus the

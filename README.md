@@ -5,10 +5,13 @@ Scene SyncのGodot addonを、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision向
 ## 固定しているsource
 
 - MR基盤: [`afjk/MR-Godot-Template`](https://github.com/afjk/MR-Godot-Template/tree/5d21cf1c7dcd7c1995dff28d02021eb412eda606) commit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`
-- Scene Sync SDK: [`afjk/afjk.jp` のGodot addons](https://github.com/afjk/afjk.jp/tree/c5e373b6207b194b11ef3ee34c392cd891052070/godot/addons) commit `c5e373b6207b194b11ef3ee34c392cd891052070`、addon `0.5.1`
+- Scene Sync SDK: [`afjk/afjk.jp` のGodot addons](https://github.com/afjk/afjk.jp/tree/3385e633c1710feb11636ad278ad106fe490ade5/godot/addons) commit `3385e633c1710feb11636ad278ad106fe490ade5`、addon `0.5.1`
 - Scene Sync Rapier runtime: [`afjk/godot-rapier-physics`](https://github.com/afjk/godot-rapier-physics/releases/tag/scenesync-v0.8.28-r0.30.0.3) tag `scenesync-v0.8.28-r0.30.0.3`、commit `b0578430c3b975bcf3bc0ee86df0450b51a57eb0`、Rapier core `0.30.0`
+- Gaussian Splat renderer: [`shiena/godot-gsplat`](https://github.com/shiena/godot-gsplat/tree/dfc8df4893f0f6e26c847590ff1669fa8404da6d) commit `dfc8df4893f0f6e26c847590ff1669fa8404da6d`、addon `0.1.0`
 
 SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記commitの`godot/addons/scene_sync`と`godot/addons/godot-rapier3d`を、それぞれ`addons/scene_sync`と`addons/godot-rapier3d`へ完全vendorしています。Rapier GDExtensionが利用できるplatformでは固定timestepのScene Sync physicsを実行し、利用できないplatformやextension欠落時もphysics metadataの同期を継続してsimulationだけを無効化します。
+
+`godot-gsplat`はScene Sync SDKとは別の固定dependencyとして、addon、GDExtension descriptor、Linux x86_64、macOS arm64、Android arm64のnative libraryをvendorしています。Android libraryは固定Cargo.lockとcompatibility patchを使い、NDK `28.1.13356709`でbuildしています。build provenanceは`addons/godot_gsplat/SCENESYNC_BUILD.txt`に記録しています。
 
 ## 対応端末
 
@@ -17,7 +20,7 @@ SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記
 - VIVE Focus Vision
 - Android XR（MR基盤から取り込んだpresetのみ。Scene Sync側での確認は未実施）
 
-いずれもAndroid arm64のDebug APKを対象とします。現時点ではすべての端末で実機での起動・passthrough・Scene Sync接続を未検証です。CIやローカルでのbuild成功は実機動作確認の代わりにはなりません。
+いずれもAndroid arm64のDebug APKを対象とします。Quest 3ではScene Syncから受信したGaussian Splatがpoint-preview fallbackとして表示されるところまで実機確認済みです。Vulkan Mobileとnative `godot-gsplat`による実Gaussian描画、stereo sorting、passthroughとの併用、性能は未検証です。CIやローカルでのbuild成功は実機動作確認の代わりにはなりません。
 
 ## MR基盤から取り込んだOpenXRの挙動
 
@@ -42,6 +45,12 @@ XRフォーカスの扱いだけMR基盤から変更しています。上流の`
 
 このXRアプリはShared PlaybackのFollower Onlyとして動作し、Controllerを取得しません。同じroomに有効なControllerがいる間はAnimation、Loomlet、Rapierが共通のShared Timeへ追従し、Controllerがいない場合やrelease／切断／lease失効後は、表示時刻と物理状態を維持したままlocal monotonic timeで進行します。
 
+## Gaussian Splatを表示する
+
+Scene Sync Godotは`KHR_gaussian_splatting` GLBを受信し、Vulkan Mobile上の`godot-gsplat`で実Gaussian描画します。`.ply`、`.sog`、`.spz`などはGodotへ直接送らず、SceneSync Webへ追加して`KHR_gaussian_splatting` GLBへ正規化します。
+
+native backendが正常に選択されると、Godot logに`Gaussian Splat backend registered: godot-gsplat`が出力されます。`showing point-cloud preview`が出る場合は実rendererへ入っていません。QuestではXR profileが自動選択され、splat数に応じたbudget、SH1、head-center sorting、center depthを使用します。
+
 ## Pull RequestのAPKを取得する
 
 `main`向けPull Requestでは`Build Android XR Debug APKs` workflowが4 presetをbuildします。workflow完了後、Actions runの`Artifacts`から次を取得します。
@@ -53,7 +62,7 @@ XRフォーカスの扱いだけMR基盤から変更しています。上流の`
 
 Actions画面の`Run workflow`から手動実行もできます。生成物はDebug APKのみで、release用credentialは使用しません。
 
-あわせて`Static Checks` workflowが、`addons/`以外の追跡中`.gd`へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`と`addons/godot-rapier3d`は対象外です。ローカルでは次で同じ確認ができます。
+あわせて`Static Checks` workflowが、`addons/`以外の追跡中`.gd`へ`gdformat --diff`と`gdlint`を実行します。vendorしている`addons/scene_sync`、`addons/godot-rapier3d`、`addons/godot_gsplat`は対象外です。ローカルでは次で同じ確認ができます。
 
 ```bash
 pip install 'gdtoolkit==4.*'
