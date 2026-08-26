@@ -43,6 +43,12 @@ XRフォーカスの扱いだけMR基盤から変更しています。上流の`
 
 受信objectはXR rig外の`SceneSyncRoot`以下へ生成されます。headsetのpause/resume時は接続処理を停止・再開し、XR origin自体は同期対象にしません。
 
+## 別プレイヤーのavatarを表示する
+
+同じroomに参加したWeb／Godotプレイヤーは、Web版と同じ`scene-avatar` presence payloadで頭と両手のposeを交換します。相手はpeer IDから決まる色の頭、目、手、nickname labelとして`RemoteAvatars`以下へ表示され、自分自身のavatarは表示されません。desktopのWebプレイヤーは頭だけ、XRプレイヤーはtracking中の両手も表示します。
+
+poseは最大10Hzで送信し、受信側ではframe間を補間します。peer一覧から消えた相手は直ちに削除し、切断通知を受けられない場合も最後のposeから3秒で削除します。avatarは一時的なpresence表示であり、`SceneSyncRoot`のscene objectや履歴には追加されません。
+
 このXRアプリはShared PlaybackのFollower Onlyとして動作し、Controllerを取得しません。同じroomに有効なControllerがいる間はAnimation、Loomlet、Rapierが共通のShared Timeへ追従し、Controllerがいない場合やrelease／切断／lease失効後は、表示時刻と物理状態を維持したままlocal monotonic timeで進行します。
 
 ## Gaussian Splatを表示する
