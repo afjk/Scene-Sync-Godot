@@ -2,6 +2,8 @@ class_name SceneSyncAvatarManager
 extends Node
 
 const AVATAR_KIND := "scene-avatar"
+const DESKTOP_MODE := "desktop"
+const VR_MODE := "vr"
 const SEND_INTERVAL_SECONDS := 0.1
 const HEARTBEAT_INTERVAL_SECONDS := 1.0
 const AVATAR_TIMEOUT_MSEC := 3000
@@ -105,7 +107,7 @@ func handle_avatar_message(payload: Dictionary, from_info: Dictionary = {}) -> v
 	state["head_rotation"] = head_pose["rotation"]
 	_update_avatar_label(state, String(payload.get("nickname", "")))
 
-	var desktop_mode := String(payload.get("mode", "vr")).to_lower() == "desktop"
+	var desktop_mode := String(payload.get("mode", VR_MODE)).to_lower() == DESKTOP_MODE
 	_set_hand_target(state, "left", null if desktop_mode else payload.get("left", null))
 	_set_hand_target(state, "right", null if desktop_mode else payload.get("right", null))
 
@@ -155,7 +157,7 @@ func build_local_avatar_payload() -> Dictionary:
 		"kind": AVATAR_KIND,
 		"nickname": _local_nickname(),
 		"t": int(Time.get_unix_time_from_system() * 1000.0),
-		"mode": "mr" if get_viewport().use_xr else "desktop",
+		"mode": VR_MODE if get_viewport().use_xr else DESKTOP_MODE,
 		"head": _transform_to_wire_pose(head_transform),
 	}
 	if get_viewport().use_xr:

@@ -12,12 +12,15 @@ func _init() -> void:
 
 
 func _run() -> void:
+	_assert_equal(AVATAR_MANAGER_SCRIPT.VR_MODE, "vr", "Web-compatible XR mode")
+
 	var world := Node3D.new()
 	root.add_child(world)
 	var remote_root := Node3D.new()
 	world.add_child(remote_root)
 
 	var transport: SceneSyncAvatarTransport = AVATAR_TRANSPORT_SCRIPT.new()
+	_assert_true(transport.get_script().is_tool(), "avatar transport retains editor execution")
 	transport.auto_connect = false
 	world.add_child(transport)
 	transport._client.id = "local-peer"
