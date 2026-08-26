@@ -6,10 +6,10 @@
 
 | 項目 | Version／設定 |
 | --- | --- |
-| Godot | `.NET 4.6.3-stable` |
+| Godot | `.NET 4.7.2-stable` |
 | C# target framework | `net8.0` |
 | 開発用.NET SDK | `9.0`以上 |
-| Godot Android export templates | `4.6.3-stable`のMono templates |
+| Godot Android export templates | `4.7.2-stable`のMono templates |
 | Godot OpenXR Vendors | `5.1.0-stable` |
 | Scene Sync addon | `0.5.1` |
 | Scene Sync Rapier tag | `scenesync-v0.8.28-r0.30.0.3` |
@@ -18,16 +18,17 @@
 | cargo-ndk | `4.1.2` |
 | Linux build container | `rust:1.94.0-bookworm@sha256:365468470075493dc4583f47387001854321c5a8583ea9604b297e67f01c5a4f` |
 | OpenJDK | `17` |
-| Android SDK Platform | `35` |
-| Android SDK Build-Tools | `35.0.1` |
+| Android compile SDK Platform | `36`（export targetは`35`） |
+| Android SDK Build-Tools | `36.1.0` |
 | CMake | `3.10.2.4988404` |
-| Android NDK | `28.1.13356709` |
+| Android NDK（Godot template） | `29.0.14206865` |
+| Android NDK（godot-gsplat再build） | `28.1.13356709` |
 | ABI | `arm64-v8a` |
 | Package | `com.afjk.scenesyncgodot` |
 
 MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `3385e633c1710feb11636ad278ad106fe490ade5`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
-Gaussian Splatの実rendererは`shiena/godot-gsplat`の固定commitからbuildし、macOS arm64とAndroid arm64のnative libraryをrepositoryにvendorしています。Android binaryは上記NDK、固定Cargo.lock、Scene Syncのpush-constant compatibility patchを使用します。
+Gaussian Splatの実rendererは`shiena/godot-gsplat`の固定commitからbuildし、macOS arm64とAndroid arm64のnative libraryをrepositoryにvendorしています。Android binaryはgodot-gsplat再build用NDKと固定Cargo.lockを使用します。Godot 4.7のshader reflectionと一致させるため、upstreamの84-byte push constant layoutは変更しません。
 
 ## 1. Repositoryを取得する
 
@@ -67,19 +68,20 @@ Android StudioまたはAndroid command-line toolsを導入し、CIと同じpacka
 <ANDROID_SDK_ROOT>/cmdline-tools/latest/bin/sdkmanager \
   --sdk_root=<ANDROID_SDK_ROOT> \
   "platform-tools" \
-  "build-tools;35.0.1" \
-  "platforms;android-35" \
+  "build-tools;36.1.0" \
+  "platforms;android-36" \
   "cmake;3.10.2.4988404" \
+  "ndk;29.0.14206865" \
   "ndk;28.1.13356709"
 ```
 
 Godotの`Editor Settings > Export > Android > Android SDK Path`に同じSDK directoryを指定します。directory直下の`platform-tools/adb`が実行できることを確認してください。
 
-### Godot .NET 4.6.3-stable
+### Godot .NET 4.7.2-stable
 
-[Godot 4.6.3-stable release](https://github.com/godotengine/godot/releases/tag/4.6.3-stable)から、OSに合う`.NET`／`mono`版editorを取得します。標準版GodotではC#をbuildできません。
+[Godot 4.7.2-stable release](https://github.com/godotengine/godot/releases/tag/4.7.2-stable)から、OSに合う`.NET`／`mono`版editorを取得します。標準版GodotではC#をbuildできません。
 
-Godot本体に加え、同じreleaseの`mono_export_templates`を取得し、Godotの`Manage Export Templates`から導入します。標準版export templatesではなく、Mono版である必要があります。インストール後、`4.6.3.stable.mono`のtemplate directoryに`android_debug.apk`と`android_source.zip`があることを確認します。
+Godot本体に加え、同じreleaseの`mono_export_templates`を取得し、Godotの`Manage Export Templates`から導入します。標準版export templatesではなく、Mono版である必要があります。インストール後、`4.7.2.stable.mono`のtemplate directoryに`android_debug.apk`と`android_source.zip`があることを確認します。
 
 以降では.NET版Godot実行ファイルを`GODOT_BIN`へ設定します。例:
 
@@ -88,12 +90,12 @@ Godot本体に加え、同じreleaseの`mono_export_templates`を取得し、God
 GODOT_BIN="/Applications/Godot_mono.app/Contents/MacOS/Godot"
 
 # Linuxでrelease archiveを展開した場合の例
-# GODOT_BIN="/path/to/Godot_v4.6.3-stable_mono_linux_x86_64"
+# GODOT_BIN="/path/to/Godot_v4.7.2-stable_mono_linux_x86_64"
 
 "$GODOT_BIN" --version
 ```
 
-version出力が`4.6.3.stable.mono`で始まることを確認してください。
+version出力が`4.7.2.stable.mono`で始まることを確認してください。
 
 ### OpenXR Vendors 5.1.0-stable
 
@@ -297,7 +299,7 @@ packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 - passthroughは標準OpenXRのAlpha environment blendで動作し、ベンダー固有のpassthrough設定はありません。
 - MR基盤側でもAndroid XR実機での確認は行われていません。
 
-Quest 3では旧Compatibility構成でGaussian Splatがpoint-preview fallbackとして表示されるところまで確認済みです。Vulkan Mobileとnative rendererを使う実Gaussian描画、per-eye/stereoの見え、passthroughとの併用、性能は未検証です。PICO 4 Ultra、VIVE Focus Vision、Android XRも実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
+PICO 4 UltraではVulkan Mobileでの起動、Scene Sync接続、Dragon（62,137 splats）の表示、およびgzip配信されたLion（195,099 splats）のnative backend生成とcompute dispatchを確認済みです。per-eye/stereoの見え、passthroughとの併用、継続性能は引き続き確認が必要です。Quest 3、VIVE Focus Vision、Android XRの実Gaussian描画も実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、上記以外が動作済みという意味ではありません。
 
 ## 8. Scene Sync接続を確認する
 
@@ -339,13 +341,13 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 
 ### C# buildは通るがGodotでassemblyをloadできない
 
-- 標準版ではなくGodot `.NET 4.6.3-stable`を使用します。
+- 標準版ではなくGodot `.NET 4.7.2-stable`を使用します。
 - `dotnet build`後にGodotの`--import`を実行します。
-- Godot本体、Mono export templates、`Godot.NET.Sdk`のversionが`4.6.3`で揃っていることを確認します。
+- Godot本体、Mono export templates、`Godot.NET.Sdk`のversionが`4.7.2`で揃っていることを確認します。
 
 ### `No export template found`／Android template error
 
-- `4.6.3-stable`のMono export templatesを導入します。標準版templatesや異なるpatch versionは使用しません。
+- `4.7.2-stable`のMono export templatesを導入します。標準版templatesや異なるpatch versionは使用しません。
 - `android_debug.apk`と`android_source.zip`が同じtemplate directoryにあることを確認します。
 - `--install-android-build-template`を付けるか、Godot editorからAndroid Build Templateを導入します。
 
@@ -353,7 +355,7 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 
 - Java SDK PathがJDK 17を指していることを確認します。
 - Android SDK Pathと`<ANDROID_SDK_ROOT>`が同じdirectoryを指していることを確認します。
-- Platform 35、Build-Tools 35.0.1、CMake 3.10.2.4988404、NDK 28.1.13356709を再確認します。
+- compile SDK Platform 36、target SDK 35、Build-Tools 36.1.0、CMake 3.10.2.4988404、Godot template用NDK 29.0.14206865を再確認します。godot-gsplatを再buildする場合だけ、別途NDK 28.1.13356709も必要です。
 - 初回Gradle buildには依存物を取得するネットワーク接続が必要です。
 
 ### OpenXR Vendorsのexport項目がない
@@ -367,6 +369,12 @@ artifactの保存期間は14日です。このworkflowはDebug APK専用です�
 - 端末OS／firmwareを更新し、アプリ権限、passthrough、Hand Trackingを端末側で有効にします。
 - `adb logcat`でGodotとOpenXR runtimeの初期化errorを確認します。
 - 実行中runtimeが必要なpassthrough、Hand Tracking、controller interaction profileを提供していることを確認します。
+
+### PICOでVulkan起動直後にnative crashする
+
+- Godot `.NET 4.7.2-stable`と同versionのMono export templatesを使用します。4.6.xにはPICO runtimeが誤通知する`XR_META_foveation_eye_tracked`を無効化する設定がありません。
+- `PICO 4 Ultra Debug` presetのcustom featureが`pico_xr`であることを確認します。このfeature overrideでeye-tracked foveationだけを無効化し、Vulkan Mobileと固定foveationを維持します。
+- `xr/openxr/foveation_with_subsampled_images`は`false`のままにします。PICO 4／4 Ultraではsubsampled image foveationを有効にしません。
 
 ### Scene Syncが接続できない／詳細errorがpanelに出ない
 
@@ -386,7 +394,7 @@ URL assetの問題は`asset_load_diagnostic`の`status`、`attempt`、`reason`�
 ### Rapier simulationが無効になる
 
 - `addons/godot-rapier3d/SCENESYNC_BUILD.txt`と対象platformのnative libraryが存在することを確認します。
-- Godot `4.6.3`を使用し、GDExtension API `4.6`との互換性を維持します。
+- Godot `4.7.2`を使用します。vendor binaryはGDExtension API `4.6`をtargetにしており、4.7の後方互換性でloadします。
 - Godot logのnative library load errorと、Scene Syncの`physics_runtime_diagnostic`／`rapier_availability_changed`を確認します。
 - `get_rapier_status()`の`reason`が`rapier-addon-unavailable`ならmetadata-only fallbackです。
 - vendor済みbinaryや`scene_sync_rapier_bridge.gd`を直接patchせず、upstream pinを更新します。

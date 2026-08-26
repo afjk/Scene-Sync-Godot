@@ -38,7 +38,7 @@ preview.
 
 `godot-gsplat` is a separate dependency from the two SDK subtrees above. It is
 pinned to commit `dfc8df4893f0f6e26c847590ff1669fa8404da6d`; its fixed Cargo
-lockfile, compatibility patch, licenses, native binary hashes, and toolchain
+lockfile, platform-specific source patch policy, licenses, native binary hashes, and toolchain
 provenance are recorded in `scripts/third_party` and
 `addons/godot_gsplat/SCENESYNC_BUILD.txt`. Do not replace its binary with an
 unrecorded local build. Use `scripts/build_godot_gsplat_android.sh`, compare the

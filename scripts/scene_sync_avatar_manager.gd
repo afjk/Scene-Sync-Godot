@@ -49,7 +49,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	_disconnect_manager(scene_sync_manager)
+	_disconnect_current_manager()
 	clear_remote_avatars()
 
 
@@ -64,7 +64,7 @@ func set_scene_sync_manager(value: Node) -> void:
 	if next_manager == scene_sync_manager and _manager_signals_connected(next_manager):
 		return
 
-	_disconnect_manager(scene_sync_manager)
+	_disconnect_current_manager()
 	scene_sync_manager = next_manager
 	clear_remote_avatars()
 	_reset_local_send_state()
@@ -226,6 +226,15 @@ func _disconnect_manager(target: SceneSyncAvatarTransport) -> void:
 		target.connected.disconnect(_on_connected)
 	if target.disconnected.is_connected(_on_disconnected):
 		target.disconnected.disconnect(_on_disconnected)
+
+
+func _disconnect_current_manager() -> void:
+	# A queued SceneSync manager can be freed before the avatar manager is
+	# rebound. Do not pass that stale typed reference through a typed argument,
+	# because GDScript rejects it before _disconnect_manager() can validate it.
+	if scene_sync_manager != null and is_instance_valid(scene_sync_manager):
+		_disconnect_manager(scene_sync_manager)
+	scene_sync_manager = null
 
 
 func _manager_signals_connected(target: SceneSyncAvatarTransport) -> bool:

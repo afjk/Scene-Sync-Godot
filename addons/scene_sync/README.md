@@ -168,9 +168,9 @@ Override the preset with project setting `scene_sync/gaussian_splat/render_profi
 - `3`: High (all splats / SH3; expensive for large captures)
 - `4`: adaptive XR
 
-The pinned upstream currently sends an 84-byte sort push constant for a std430 block whose required
-size is 96 bytes. The installer applies and records a 12-byte tail-padding compatibility patch;
-without it Godot 4.6 rejects the compute dispatch and the cloud can appear as a single ellipse.
+On Godot 4.7 Android, the pinned upstream's 84-byte sort push constant matches the compute shader's
+reflected range. The Android build must not append std430 tail padding: RenderingDevice validates
+the supplied byte count exactly and rejects a 96-byte value before compute dispatch.
 
 The backend registers automatically when the GDExtension is present. Actual splat rendering remains
 pluggable for custom integrations:

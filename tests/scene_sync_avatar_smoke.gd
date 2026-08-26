@@ -103,6 +103,21 @@ func _run() -> void:
 	avatar_manager.reconcile_peers([{"id": "local-peer"}])
 	_assert_equal(avatar_manager.get_remote_avatar_count(), 0, "departed peer is removed")
 
+	# Explicit disconnect rebuilds the Scene Sync manager. Rebinding must not
+	# pass the previously freed typed reference into _disconnect_manager().
+	avatar_manager.set_process(false)
+	transport.queue_free()
+	await process_frame
+	var replacement_transport: SceneSyncAvatarTransport = AVATAR_TRANSPORT_SCRIPT.new()
+	replacement_transport.auto_connect = false
+	world.add_child(replacement_transport)
+	avatar_manager.set_scene_sync_manager(replacement_transport)
+	_assert_true(
+		avatar_manager.scene_sync_manager == replacement_transport,
+		"avatar manager rebinds after the previous transport is freed",
+	)
+	avatar_manager.set_process(true)
+
 	avatar_manager.handle_avatar_message(remote_payload, {"id": "remote-peer"})
 	avatar_manager._remote_avatars["remote-peer"]["last_seen_msec"] = (
 		Time.get_ticks_msec() - AVATAR_MANAGER_SCRIPT.AVATAR_TIMEOUT_MSEC - 1
