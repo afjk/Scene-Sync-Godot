@@ -29,6 +29,7 @@ SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記
 - runtimeが提供するコントローラー3Dモデルの表示。core `XR_EXT_render_model`（`OpenXRRenderModelManager`）とMeta `XR_FB_render_model`の両方を用意し、モデルを返した方を採用します。どちらも非対応なら従来の球マーカーへfallbackします。
 - `session_begun`で`maximum_refresh_rate`（既定90Hz）以下の最良のdisplay refresh rateを選び、`Engine.physics_ticks_per_second`を追従させます。Scene SyncのRapier runtimeは自前の固定timestepで進むため、この変更はdeterminismに影響しません。
 - Local Floor reference space、foveated rendering（High／dynamic）、MSAA 2xの推奨project設定。
+- PICO presetではGodot 4.7.2の`pico_xr` feature overrideによりeye-tracked foveationを無効化。PICO 4／4 Ultraのruntimeが誤って`XR_META_foveation_eye_tracked`対応を通知して起こすVulkan起動crashを回避し、固定foveationとVulkan Mobileは維持します。subsampled image foveationも無効です。
 - コントローラー由来のHand Trackingでは`CONFORM_TO_CONTROLLER`、光学式では`UNOBSTRUCTED`へ`set_motion_range()`を切り替え。
 - 各export presetの`Enable Openxr Validation Layers`（既定は無効）と`xr/openxr/extensions/debug_utils=2`。
 

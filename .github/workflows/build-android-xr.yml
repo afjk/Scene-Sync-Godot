@@ -13,11 +13,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GODOT_VERSION: "4.6.3"
-  GODOT_RELEASE: "4.6.3-stable"
+  GODOT_VERSION: "4.7.2"
+  GODOT_RELEASE: "4.7.2-stable"
   OPENXR_VENDORS_VERSION: "5.1.0-stable"
-  GODOT_EDITOR_SHA256: 702a8a6785060203fd46373adf864586ecf0c377ac685d7107dde66b1eba0a9e
-  GODOT_TEMPLATES_SHA256: 6436f474ee085fb0a94d3d296b9821736bdd663b6e91b2228fdf77066f1d1400
+  GODOT_EDITOR_SHA256: 129f82db7bafd54ae14bb5bb284041c73860e8c7a009a3a026ca5e946cbff247
+  GODOT_TEMPLATES_SHA256: 92f8681e349ef1f90891b792da95e3b2b0bd1ed610b78018c58feb2d87e15a9d
   OPENXR_VENDORS_SHA256: 6a838dbdf4115549e4511ebee0da9a5dcc8f9f6258d4cc2f2ee57a907a3e2911
   SCENE_SYNC_RAPIER_TAG: scenesync-v0.8.28-r0.30.0.3
   SCENE_SYNC_RAPIER_ASSET_SHA256: 90dbbbef3ddfd4e9d6fa34bed713dd1417a2ead70bbde668de6857c131cafbae
@@ -96,6 +96,21 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify PICO Vulkan startup workaround
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grep -Fxq 'openxr/foveation_eye_tracked.pico_xr=false' project.godot
+          grep -Fxq 'openxr/foveation_with_subsampled_images=false' project.godot
+          awk '
+            /^\[preset\.1\]$/ { in_pico = 1; next }
+            /^\[preset\.1\.options\]$/ { in_pico = 0 }
+            in_pico && $0 == "name=\"PICO 4 Ultra Debug\"" { found_name = 1 }
+            in_pico && $0 == "custom_features=\"pico_xr\"" { found_feature = 1 }
+            END { exit !(found_name && found_feature) }
+          ' export_presets.cfg
 
       - name: Verify vendored Scene Sync Rapier runtime
         shell: bash
@@ -177,10 +192,10 @@ jobs:
           test -x "$SDKMANAGER"
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" \
             "platform-tools" \
-            "build-tools;35.0.1" \
-            "platforms;android-35" \
+            "build-tools;36.1.0" \
+            "platforms;android-36" \
             "cmake;3.10.2.4988404" \
-            "ndk;28.1.13356709"
+            "ndk;29.0.14206865"
 
       - name: Restore pinned Godot downloads
         uses: actions/cache/restore@v4
@@ -240,8 +255,8 @@ jobs:
           test "${#GODOT_BINARIES[@]}" -eq 1
           GODOT_BIN="${GODOT_BINARIES[0]}"
           chmod +x "$GODOT_BIN"
-          "$GODOT_BIN" --version | grep -q '^4\.6\.3\.stable\.mono'
-          grep -q '^4\.6\.3\.stable' "$TEMPLATES_DIR/version.txt"
+          "$GODOT_BIN" --version | grep -q '^4\.7\.2\.stable\.mono'
+          grep -q '^4\.7\.2\.stable' "$TEMPLATES_DIR/version.txt"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
 
       - name: Install OpenXR Vendors plugin
