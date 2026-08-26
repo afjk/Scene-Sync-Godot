@@ -73,8 +73,9 @@ var _last_effective_playback_time: float = 0.0
 var _has_effective_playback_sample: bool = false
 
 const SEND_INTERVAL: float = 0.05
-const RECOVERY_TIMEOUT_SECONDS: float = 30.0
+const RECOVERY_TIMEOUT_SECONDS: float = 180.0
 const PEER_RETRY_INTERVAL_SECONDS: float = 4.0
+const PIPING_REQUEST_TIMEOUT_SECONDS: float = 120.0
 const RECOVERY_RESPONDER_COOLDOWN_SECONDS: float = 30.0
 const MAX_GLB_SIZE: int = 50 * 1024 * 1024
 const OBJECT_ID_META := "scene_sync_object_id"
@@ -1003,7 +1004,15 @@ func _load_mesh_for_object(object_id: String, payload: Dictionary, mesh_path: St
         return
     _carrier_load_signatures.erase(object_id)
     if data.is_empty():
-        _handle_missing_glb(object_id, mesh_path, null, asset_id)
+        var asset := _asset_from_payload(payload)
+        var expected_size := _safe_int(asset.get("size", 0), 0)
+        _handle_missing_glb(
+            object_id,
+            mesh_path,
+            expected_size if expected_size > 0 else null,
+            asset_id
+        )
+        return
     _replace_object_with_mesh_data(object_id, payload, data)
 
 
@@ -1496,6 +1505,10 @@ func _handle_missing_glb(object_id: String, mesh_path: String, expected_size: Va
     _pending_recoveries[request_id] = recovery
 
     var peers := _get_other_peers()
+    print(
+        "[SceneSync] GLB peer recovery started object=%s asset=%s bytes=%s peers=%d timeout=%.0fs"
+        % [object_id, asset_id, str(expected_size), peers.size(), RECOVERY_TIMEOUT_SECONDS]
+    )
     if peers.is_empty():
         _remove_recovery_after_timeout(request_id)
         return
@@ -1527,20 +1540,41 @@ func _retry_recovery_peers(request_id: String, peers: Array) -> void:
             _safe_string(recovery.get("meshPath", "")),
             recovery.get("expectedSize", null)
         ))
+        print(
+            "[SceneSync] GLB peer recovery requested object=%s peer=%s"
+            % [_safe_string(recovery.get("objectId", "")), peer_id]
+        )
 
         if get_tree() == null:
             return
         await get_tree().create_timer(PEER_RETRY_INTERVAL_SECONDS).timeout
 
-    if _pending_recoveries.has(request_id):
-        _pending_recoveries.erase(request_id)
+    # Keep the request alive while a peer's Piping transfer is in flight. A
+    # 30-50 MB GLB commonly takes much longer than the four-second delay used
+    # to fan the request out to the next peer.
 
 
 func _remove_recovery_after_timeout(request_id: String) -> void:
     if get_tree() == null:
         return
     await get_tree().create_timer(RECOVERY_TIMEOUT_SECONDS).timeout
+    var recovery_value = _pending_recoveries.get(request_id, null)
+    if not (recovery_value is Dictionary):
+        return
+    var recovery := recovery_value as Dictionary
     _pending_recoveries.erase(request_id)
+    var object_id := _safe_string(recovery.get("objectId", ""))
+    push_warning(
+        "[SceneSync] GLB peer recovery timed out object=%s asset=%s"
+        % [object_id, _safe_string(recovery.get("assetId", ""))]
+    )
+    _emit_visual_failure(object_id, "mesh", {"reason": "carrier-timeout"}, 0)
+    if _get_managed_node(object_id) != null:
+        _load_mesh_bytes_for_object(
+            object_id,
+            PackedByteArray(),
+            _safe_string(recovery.get("assetId", ""))
+        )
 
 
 func _handle_file_handoff(payload: Dictionary, from_peer_id: String) -> void:
@@ -1552,7 +1586,21 @@ func _handle_file_handoff(payload: Dictionary, from_peer_id: String) -> void:
         return
 
     var url := "%s/%s" % [_get_piping_server_base().trim_suffix("/"), path.uri_encode()]
+    print(
+        "[SceneSync] GLB peer transfer accepted peer=%s path=%s bytes=%d"
+        % [from_peer_id, path, size]
+    )
     var data := await _download_bytes_from_url(url)
+    if data.is_empty():
+        push_warning(
+            "[SceneSync] GLB peer transfer failed peer=%s path=%s expectedBytes=%d"
+            % [from_peer_id, path, size]
+        )
+    else:
+        print(
+            "[SceneSync] GLB peer transfer downloaded peer=%s path=%s bytes=%d"
+            % [from_peer_id, path, data.size()]
+        )
     _handle_received_file(from_peer_id, filename, data, mime)
 
 
@@ -1602,6 +1650,10 @@ func _handle_received_file(from_peer_id: String, filename: String, data: PackedB
         break
 
     if matched_request_id == "":
+        push_warning(
+            "[SceneSync] Discarding GLB peer transfer with no active recovery peer=%s bytes=%d"
+            % [from_peer_id, data.size()]
+        )
         return
 
     var expected_asset_id := _safe_string(matched_recovery.get("assetId", ""))
@@ -1609,9 +1661,21 @@ func _handle_received_file(from_peer_id: String, filename: String, data: PackedB
     if expected_asset_id != "":
         computed_asset_id = SceneSyncBlobClient.compute_asset_id(data)
         if computed_asset_id == "" or computed_asset_id != expected_asset_id:
+            push_warning(
+                "[SceneSync] Discarding GLB peer transfer with mismatched asset id peer=%s"
+                % from_peer_id
+            )
             return
 
     _pending_recoveries.erase(matched_request_id)
+    print(
+        "[SceneSync] GLB peer recovery completed object=%s asset=%s bytes=%d"
+        % [
+            _safe_string(matched_recovery.get("objectId", "")),
+            computed_asset_id if computed_asset_id != "" else expected_asset_id,
+            data.size(),
+        ]
+    )
     var mesh_path := _safe_string(matched_recovery.get("meshPath", ""))
     _cache_mesh_data(mesh_path, computed_asset_id if computed_asset_id != "" else expected_asset_id, data)
     _load_mesh_bytes_for_object(
@@ -1654,6 +1718,8 @@ func _upload_bytes_to_url(url: String, data: PackedByteArray, mime: String) -> E
 
 func _download_bytes_from_url(url: String) -> PackedByteArray:
     var request := HTTPRequest.new()
+    request.timeout = PIPING_REQUEST_TIMEOUT_SECONDS
+    request.body_size_limit = MAX_GLB_SIZE
     add_child(request)
     var err := request.request(url)
     if err != OK:
@@ -1661,8 +1727,13 @@ func _download_bytes_from_url(url: String) -> PackedByteArray:
         return PackedByteArray()
     var result: Array = await request.request_completed
     request.queue_free()
+    var request_result := int(result[0])
     var response_code := int(result[1])
-    if response_code < 200 or response_code >= 300:
+    if request_result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+        push_warning(
+            "[SceneSync] Piping download failed result=%d status=%d"
+            % [request_result, response_code]
+        )
         return PackedByteArray()
     return result[3]
 
