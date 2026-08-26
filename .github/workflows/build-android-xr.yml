@@ -27,7 +27,7 @@ env:
   GODOT_GSPLAT_CARGO_LOCK_SHA256: 2d3687bac6d0e664b6fe95893b74a959f44941a0cabdc0c3627c99cda3239783
   GODOT_GSPLAT_PATCH_SHA256: 86bc3f5591d79a3ffa5c5545f85fc50c9f4a32ed0f90110816a982a034011805
   GODOT_GSPLAT_LINUX_SHA256: d791edc9c679c63636185ee2acfb5456a617168e459119071f8ae70b68322d62
-  GODOT_GSPLAT_ANDROID_SHA256: 751144ab013839c84a107f131c05733d82bfca07079180bbdff8ae71432f3e32
+  GODOT_GSPLAT_ANDROID_SHA256: 40124612b268f402c0ebcefeaafe6ae92f8b8e512ec7b13c4f2d2d466ff4a11b
   TOOLCHAIN_CACHE_DIR: /home/runner/.cache/scene-sync-godot
 
 jobs:
@@ -143,7 +143,8 @@ jobs:
           test -f "$DESCRIPTOR"
           grep -Fxq "commit=$GODOT_GSPLAT_COMMIT" "$BUILD_INFO"
           grep -Fxq "cargo_lock_sha256=$GODOT_GSPLAT_CARGO_LOCK_SHA256" "$BUILD_INFO"
-          grep -Fxq "compatibility_patch_sha256=$GODOT_GSPLAT_PATCH_SHA256" "$BUILD_INFO"
+          grep -Fxq "android_source_patch=none" "$BUILD_INFO"
+          grep -Fxq "desktop_compatibility_patch_sha256=$GODOT_GSPLAT_PATCH_SHA256" "$BUILD_INFO"
           grep -Fxq "linux_binary_sha256=$GODOT_GSPLAT_LINUX_SHA256" "$BUILD_INFO"
           grep -Fxq "android_binary_sha256=$GODOT_GSPLAT_ANDROID_SHA256" "$BUILD_INFO"
           grep -Fq 'android.debug.arm64 = "res://addons/godot_gsplat/bin/android-arm64/libgodot_gsplat.so"' \

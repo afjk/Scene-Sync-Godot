@@ -28,7 +28,7 @@
 
 MR基盤は`afjk/MR-Godot-Template`のcommit `5d21cf1c7dcd7c1995dff28d02021eb412eda606`、Scene Sync addon `0.5.1`とそのRapier runtimeは`afjk/afjk.jp`のcommit `3385e633c1710feb11636ad278ad106fe490ade5`に固定されています。SDKの詳細と更新方法は[SCENE_SYNC_SDK.md](SCENE_SYNC_SDK.md)を参照してください。
 
-Gaussian Splatの実rendererは`shiena/godot-gsplat`の固定commitからbuildし、macOS arm64とAndroid arm64のnative libraryをrepositoryにvendorしています。Android binaryはgodot-gsplat再build用NDK、固定Cargo.lock、Scene Syncのpush-constant compatibility patchを使用します。
+Gaussian Splatの実rendererは`shiena/godot-gsplat`の固定commitからbuildし、macOS arm64とAndroid arm64のnative libraryをrepositoryにvendorしています。Android binaryはgodot-gsplat再build用NDKと固定Cargo.lockを使用します。Godot 4.7のshader reflectionと一致させるため、upstreamの84-byte push constant layoutは変更しません。
 
 ## 1. Repositoryを取得する
 
@@ -299,7 +299,7 @@ packageは4 preset共通で`com.afjk.scenesyncgodot`です。コマンドから�
 - passthroughは標準OpenXRのAlpha environment blendで動作し、ベンダー固有のpassthrough設定はありません。
 - MR基盤側でもAndroid XR実機での確認は行われていません。
 
-Quest 3では旧Compatibility構成でGaussian Splatがpoint-preview fallbackとして表示されるところまで確認済みです。Vulkan Mobileとnative rendererを使う実Gaussian描画、per-eye/stereoの見え、passthroughとの併用、性能は未検証です。PICO 4 Ultra、VIVE Focus Vision、Android XRも実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、動作済みという意味ではありません。
+PICO 4 UltraではVulkan Mobileでの起動、Scene Sync接続、Dragon（62,137 splats）の表示、およびgzip配信されたLion（195,099 splats）のnative backend生成とcompute dispatchを確認済みです。per-eye/stereoの見え、passthroughとの併用、継続性能は引き続き確認が必要です。Quest 3、VIVE Focus Vision、Android XRの実Gaussian描画も実機検証が未完了です。端末別項目は確認すべき受け入れ項目であり、上記以外が動作済みという意味ではありません。
 
 ## 8. Scene Sync接続を確認する
 

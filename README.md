@@ -11,7 +11,7 @@ Scene SyncのGodot addonを、Meta Quest 3、PICO 4 Ultra、VIVE Focus Vision向
 
 SDKのsource of truthは`afjk/afjk.jp`です。このリポジトリでは上記commitの`godot/addons/scene_sync`と`godot/addons/godot-rapier3d`を、それぞれ`addons/scene_sync`と`addons/godot-rapier3d`へ完全vendorしています。Rapier GDExtensionが利用できるplatformでは固定timestepのScene Sync physicsを実行し、利用できないplatformやextension欠落時もphysics metadataの同期を継続してsimulationだけを無効化します。
 
-`godot-gsplat`はScene Sync SDKとは別の固定dependencyとして、addon、GDExtension descriptor、Linux x86_64、macOS arm64、Android arm64のnative libraryをvendorしています。Android libraryは固定Cargo.lockとcompatibility patchを使い、NDK `28.1.13356709`でbuildしています。build provenanceは`addons/godot_gsplat/SCENESYNC_BUILD.txt`に記録しています。
+`godot-gsplat`はScene Sync SDKとは別の固定dependencyとして、addon、GDExtension descriptor、Linux x86_64、macOS arm64、Android arm64のnative libraryをvendorしています。Android libraryは固定Cargo.lockを使い、NDK `28.1.13356709`でbuildしています。upstreamの84-byte push constant layoutは変更しません。build provenanceは`addons/godot_gsplat/SCENESYNC_BUILD.txt`に記録しています。
 
 ## 対応端末
 

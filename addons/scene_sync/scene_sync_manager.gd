@@ -990,9 +990,19 @@ func _load_mesh_for_object(object_id: String, payload: Dictionary, mesh_path: St
     var load_signature := "%s:%d:%d" % [mesh_path, expected_node.get_instance_id(), Time.get_ticks_usec()]
     _carrier_load_signatures[object_id] = load_signature
     var asset_id := _asset_id_from_payload(payload)
+    var asset := _asset_from_payload(payload)
+    var expected_size := _safe_int(asset.get("size", 0), 0)
     var data := _get_cached_mesh_data(mesh_path, asset_id)
     if data.is_empty():
-        data = await _blob_client.download_glb(mesh_path)
+        data = await _blob_client.download_glb(mesh_path, expected_size)
+        if not data.is_empty() and asset_id != "":
+            var downloaded_asset_id := SceneSyncBlobClient.compute_asset_id(data)
+            if downloaded_asset_id != asset_id:
+                push_warning(
+                    "[SceneSync] Blob GLB asset id mismatch path=%s expected=%s actual=%s"
+                    % [mesh_path, asset_id, downloaded_asset_id]
+                )
+                data = PackedByteArray()
         if not data.is_empty():
             _cache_mesh_data(mesh_path, asset_id, data)
     if _safe_string(_carrier_load_signatures.get(object_id, "")) != load_signature:
@@ -1004,8 +1014,6 @@ func _load_mesh_for_object(object_id: String, payload: Dictionary, mesh_path: St
         return
     _carrier_load_signatures.erase(object_id)
     if data.is_empty():
-        var asset := _asset_from_payload(payload)
-        var expected_size := _safe_int(asset.get("size", 0), 0)
         _handle_missing_glb(
             object_id,
             mesh_path,

@@ -19,8 +19,9 @@ Options:
   -h, --help          Show this help
 
 The script checks out the pinned upstream commit in a temporary directory,
-applies the repository-pinned Cargo.lock and compatibility patch, and builds
-the Android arm64 release library with cargo-ndk.
+applies the repository-pinned Cargo.lock, and builds the Android arm64 release
+library with cargo-ndk. The upstream 84-byte sort push constant must remain
+unchanged because Godot 4.7 validates it against shader reflection exactly.
 EOF
 }
 
@@ -33,7 +34,6 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null) || \
     die "the script must be run from a Git worktree"
 LOCK_FILE="$SCRIPT_DIR/third_party/godot-gsplat-Cargo.lock"
-PATCH_FILE="$SCRIPT_DIR/third_party/godot-gsplat-push-constant-padding.patch"
 
 android_ndk=""
 source_repo="$UPSTREAM_REPOSITORY"
@@ -71,7 +71,6 @@ done
 [ "$(basename -- "$android_ndk")" = "$EXPECTED_ANDROID_NDK" ] || \
     die "Android NDK must be $EXPECTED_ANDROID_NDK"
 [ -f "$LOCK_FILE" ] || die "missing pinned Cargo.lock: $LOCK_FILE"
-[ -f "$PATCH_FILE" ] || die "missing compatibility patch: $PATCH_FILE"
 command -v cargo >/dev/null 2>&1 || die "cargo is required"
 cargo ndk --version | grep -Fq "cargo-ndk $EXPECTED_CARGO_NDK" || \
     die "cargo-ndk $EXPECTED_CARGO_NDK is required"
@@ -102,8 +101,6 @@ resolved_commit=$(git -C "$temp_root/source" rev-parse HEAD)
 source_date_epoch=$(git -C "$temp_root/source" show -s --format=%ct HEAD)
 
 cp -- "$LOCK_FILE" "$temp_root/source/Cargo.lock"
-git -C "$temp_root/source" apply --check "$PATCH_FILE"
-git -C "$temp_root/source" apply "$PATCH_FILE"
 
 (
     cd "$temp_root/source"
